@@ -1,0 +1,24 @@
+{
+  "name": "SoundWave",
+  "short_name": "SoundWave",
+  "description": "Share & Discover Music on SoundWave",
+  "start_url": "https://pincode402-hub.github.io/soundwave/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#7b4fff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
