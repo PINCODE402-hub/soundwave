@@ -182,7 +182,7 @@ select.finp option{background:var(--card2)}
 
 /* AUTH */
 .auth-wrap{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(12px);padding:16px}
-.auth-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.auth-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.5);position:relative}
 .auth-logo{font-family:'Bebas Neue';font-size:1.9rem;letter-spacing:4px;text-align:center;background:linear-gradient(135deg,var(--a1),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:3px}
 .auth-sub{text-align:center;color:var(--muted);font-size:.74rem;margin-bottom:22px}
 .auth-tabs{display:flex;background:var(--card2);border-radius:9px;padding:3px;margin-bottom:18px}
@@ -194,7 +194,10 @@ select.finp option{background:var(--card2)}
 
 /* PROFILE */
 .prof-head{display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:18px;background:var(--card);border-radius:14px;border:1px solid var(--border)}
-.prof-av{width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,var(--a1),var(--a2));display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;flex-shrink:0}
+.prof-av-wrap{position:relative;flex-shrink:0;cursor:pointer}
+.prof-av{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--a1),var(--a2));display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;flex-shrink:0;object-fit:cover;border:3px solid var(--a1)}
+.prof-av-edit{position:absolute;bottom:0;right:0;width:22px;height:22px;border-radius:50%;background:var(--a1);border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .2s}
+.prof-av-edit:hover{background:var(--a2)}
 .prof-name{font-size:1.2rem;font-weight:800;margin-bottom:2px}
 .prof-stats{display:flex;gap:14px;margin-top:7px}
 .pst{text-align:center}
@@ -277,6 +280,7 @@ audio{display:none}
 <!-- AUTH -->
 <div class="auth-wrap" id="authWrap">
   <div class="auth-box">
+    <button onclick="document.getElementById('authWrap').classList.add('hidden')" style="position:absolute;top:14px;right:14px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;line-height:1;padding:4px;transition:color .2s" onmouseover="this.style.color='var(--txt)'" onmouseout="this.style.color='var(--muted)'">✕</button>
     <div class="auth-logo">SoundWave</div>
     <div class="auth-sub">Share & Discover Music</div>
     <div class="auth-tabs">
@@ -294,6 +298,9 @@ audio{display:none}
       <div class="fgrp"><label class="flbl">Email</label><input class="finp" type="email" id="r-email" placeholder="you@example.com" autocomplete="email"/></div>
       <div class="fgrp"><label class="flbl">Password</label><input class="finp" type="password" id="r-pass" placeholder="Min 6 characters" autocomplete="new-password" onkeydown="if(event.key==='Enter')register()"/></div>
       <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:4px" onclick="register()">Create Account</button>
+    </div>
+    <div style="text-align:center;margin-top:14px">
+      <button onclick="document.getElementById('authWrap').classList.add('hidden')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;text-decoration:underline;padding:4px">Continue as guest →</button>
     </div>
   </div>
 </div>
@@ -340,13 +347,13 @@ audio{display:none}
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search
     </div>
     <span class="sl">My Library</span>
-    <div class="ni" id="ni-upload" onclick="go('upload')">
+    <div class="ni" id="ni-upload" onclick="authGo('upload')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload
     </div>
-    <div class="ni" id="ni-favs" onclick="go('favs')">
+    <div class="ni" id="ni-favs" onclick="authGo('favs')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Favorites
     </div>
-    <div class="ni" id="ni-profile" onclick="go('profile')">
+    <div class="ni" id="ni-profile" onclick="authGo('profile')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile
     </div>
     <span class="sl" style="display:flex;justify-content:space-between;align-items:center;padding-right:10px">
@@ -454,10 +461,18 @@ audio{display:none}
     <!-- PROFILE -->
     <div class="view" id="view-profile">
       <div class="prof-head">
-        <div class="prof-av" id="profAv">?</div>
+        <div class="prof-av-wrap" onclick="document.getElementById('profPicInp').click()" title="Change profile picture">
+          <img class="prof-av hidden" id="profAvImg" alt="Profile"/>
+          <div class="prof-av" id="profAv">?</div>
+          <div class="prof-av-edit">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+        </div>
+        <input type="file" id="profPicInp" accept="image/*" class="hidden" onchange="uploadProfilePic(this)"/>
         <div>
           <div class="prof-name" id="profName">...</div>
           <div style="color:var(--muted);font-size:.7rem" id="profEmail"></div>
+          <div style="font-size:.7rem;color:var(--muted);margin-top:3px">Tap photo to change</div>
           <div class="prof-stats">
             <div class="pst"><div class="pst-n" id="stUp">0</div><div class="pst-l">Uploads</div></div>
             <div class="pst"><div class="pst-n" id="stFav">0</div><div class="pst-l">Favorites</div></div>
@@ -483,15 +498,15 @@ audio{display:none}
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     Search
   </div>
-  <div class="bnav-item" id="bn-upload" onclick="go('upload')">
+  <div class="bnav-item" id="bn-upload" onclick="authGo('upload')">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     Upload
   </div>
-  <div class="bnav-item" id="bn-favs" onclick="go('favs')">
+  <div class="bnav-item" id="bn-favs" onclick="authGo('favs')">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
     Favorites
   </div>
-  <div class="bnav-item" id="bn-profile" onclick="go('profile')">
+  <div class="bnav-item" id="bn-profile" onclick="authGo('profile')">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     Profile
   </div>
@@ -638,8 +653,17 @@ async function afterLogin(user){
   PROFILE = prof
   document.getElementById('authWrap').classList.add('hidden')
   document.getElementById('topUsername').textContent = '@'+(prof?.username||'user')
-  document.getElementById('topAvatar').textContent   = (prof?.username||'U')[0].toUpperCase()
-  document.getElementById('topAvatar').classList.remove('hidden')
+  // Show profile pic in topbar if available, else initials
+  const topAv = document.getElementById('topAvatar')
+  if(prof?.avatar_url){
+    topAv.style.backgroundImage = `url(${prof.avatar_url})`
+    topAv.style.backgroundSize  = 'cover'
+    topAv.textContent = ''
+  } else {
+    topAv.style.backgroundImage = ''
+    topAv.textContent = (prof?.username||'U')[0].toUpperCase()
+  }
+  topAv.classList.remove('hidden')
   document.getElementById('signinBtn').classList.add('hidden')
   document.getElementById('logoutBtn').classList.remove('hidden')
   await Promise.all([loadSongs(), loadFavs(), loadPls()])
@@ -654,15 +678,22 @@ async function logout(){
   document.getElementById('signinBtn').classList.remove('hidden')
   document.getElementById('topUsername').textContent=''
   aud.pause(); aud.src=''; setPlayUI(false)
-  showAuth()
+  // don't force auth screen — guest can still browse
+  go('home')
 }
 
-// check session
+// check session — guests can browse & play, login needed for upload/favs/profile
 ;(async()=>{
   const { data:{ session } } = await sb.auth.getSession()
   if(session) await afterLogin(session.user)
-  else await loadSongs()
+  else await loadSongs() // guests see songs, can play & download freely
 })()
+
+// authGo — protected nav, requires login
+function authGo(view){
+  if(!USER){ toast('Sign in to access this feature','err'); showAuth(); return }
+  go(view)
+}
 
 // ── NAV ──
 function go(view){
@@ -710,6 +741,7 @@ function renderGrid(songs,id){
   }
   g.innerHTML = songs.map(s => {
     const fav = FAVS.has(s.id)
+    const isOwner = USER && USER.id === s.user_id
     return `
     <div class="sc" onclick="playById('${s.id}')">
       ${s.cover_url ? `<img class="sc-img" src="${s.cover_url}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
@@ -729,6 +761,9 @@ function renderGrid(songs,id){
         <button class="ib" onclick="event.stopPropagation();dlSong('${s.id}','${s.title.replace(/'/g,"\\'")}')">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>
+        ${isOwner?`<button class="ib" onclick="event.stopPropagation();delSong('${s.id}')" title="Delete" style="background:rgba(255,68,102,0.75)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        </button>`:''}
       </div>
       <div class="sc-info">
         <div class="sc-title">${s.title}</div>
@@ -742,6 +777,9 @@ function renderGrid(songs,id){
         <button class="ib" onclick="event.stopPropagation();dlSong('${s.id}','${s.title.replace(/'/g,"\\'")}')">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>
+        ${isOwner?`<button class="ib" onclick="event.stopPropagation();delSong('${s.id}')" style="width:28px;height:28px;background:rgba(255,68,102,0.75)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        </button>`:''}
       </div>
     </div>`
   }).join('')
@@ -1013,7 +1051,8 @@ async function doUpload(){
 
     setUpStatus('Done! 🎉',100)
     toast('Song uploaded! 🎉','ok')
-    await loadSongs(); loadProfile()
+    await loadSongs()   // re-fetch full list → shows new song in grid instantly
+    await loadProfile() // refresh upload count
 
     setTimeout(()=>{
       document.getElementById('u-title').value=''
@@ -1053,17 +1092,35 @@ async function dlSong(id,title){
 // ── DELETE ──
 async function delSong(id){
   if(!confirm('Delete this song permanently?')) return
-  await sb.from('songs').delete().eq('id',id)
-  SONGS=SONGS.filter(s=>s.id!==id)
-  toast('Song deleted','ok'); loadProfile(); renderGrid(SONGS,'homeGrid')
+  const { error } = await sb.from('songs').delete().eq('id',id)
+  if(error){ toast('Delete failed: '+error.message,'err'); return }
+  toast('Song deleted','ok')
+  await loadSongs()   // re-fetch full list from DB → refreshes grid
+  await loadProfile() // refresh profile upload count
 }
 
 // ── PROFILE ──
 async function loadProfile(){
   if(!USER||!PROFILE) return
-  document.getElementById('profAv').textContent    = PROFILE.username[0].toUpperCase()
   document.getElementById('profName').textContent  = PROFILE.username
   document.getElementById('profEmail').textContent = USER.email
+
+  // Profile picture
+  const img = document.getElementById('profAvImg')
+  const av  = document.getElementById('profAv')
+  if(PROFILE.avatar_url){
+    img.src = PROFILE.avatar_url
+    img.classList.remove('hidden')
+    av.classList.add('hidden')
+  } else {
+    av.textContent = PROFILE.username[0].toUpperCase()
+    av.classList.remove('hidden')
+    img.classList.add('hidden')
+  }
+
+  // Also update topbar avatar
+  document.getElementById('topAvatar').textContent = PROFILE.username[0].toUpperCase()
+
   const { data:songs } = await sb.from('songs').select('*').eq('user_id',USER.id).order('created_at',{ascending:false})
   const s=songs||[]
   document.getElementById('stUp').textContent  = s.length
@@ -1072,6 +1129,35 @@ async function loadProfile(){
   const empty=document.getElementById('myEmpty')
   if(!s.length){ document.getElementById('myList').innerHTML=''; empty.classList.remove('hidden'); return }
   empty.classList.add('hidden'); renderList(s,'myList',true)
+}
+
+async function uploadProfilePic(input){
+  const file = input.files[0]; if(!file) return
+  if(!USER) return toast('Sign in first','err')
+  toast('Uploading picture...','ok')
+  try{
+    const ext  = file.name.split('.').pop()
+    const path = `avatars/${USER.id}.${ext}`
+    const { error:ue } = await sb.storage.from('covers').upload(path, file, { upsert:true })
+    if(ue) throw new Error(ue.message)
+    const { data:{ publicUrl } } = sb.storage.from('covers').getPublicUrl(path)
+    const { error:pe } = await sb.from('profiles').update({ avatar_url: publicUrl }).eq('id', USER.id)
+    if(pe) throw new Error(pe.message)
+    PROFILE.avatar_url = publicUrl
+    // Update profile view
+    const img = document.getElementById('profAvImg')
+    const av  = document.getElementById('profAv')
+    img.src = publicUrl
+    img.classList.remove('hidden')
+    av.classList.add('hidden')
+    // Update topbar avatar
+    const topAv = document.getElementById('topAvatar')
+    topAv.style.backgroundImage = `url(${publicUrl})`
+    topAv.style.backgroundSize  = 'cover'
+    topAv.textContent = ''
+    toast('Profile picture updated! ✅','ok')
+  } catch(e){ toast('Failed: '+e.message,'err') }
+  input.value='' // reset so same file can be picked again
 }
 
 // ── KEYBOARD ──
