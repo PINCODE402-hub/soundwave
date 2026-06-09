@@ -261,7 +261,7 @@ select.finp option{background:var(--card2)}
 .empty-s{font-size:.73rem}
 .hidden{display:none!important}
 
-/* ── AUDIUS BADGES ── */
+/* ── BADGES ── */
 .src-badge {
   position: absolute;
   top: 8px;
@@ -280,6 +280,10 @@ select.finp option{background:var(--card2)}
 .src-badge.audius {
   color: #cc00ff;
   border: 1px solid rgba(204, 0, 255, 0.4);
+}
+.src-badge.itunes {
+  color: #ff2d55;
+  border: 1px solid rgba(255, 45, 85, 0.4);
 }
 .vol-show{display:none}
 @media(min-width:640px){.vol-show{display:flex;align-items:center}}
@@ -342,7 +346,7 @@ audio{display:none}
   <span class="top-logo">SoundWave</span>
   <div class="top-search">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input placeholder="Search songs, artists..." id="searchQ" oninput="doSearch()"/>
+    <input placeholder="Search songs, artists..." id="searchQ" oninput="doSearch(false)"/>
   </div>
   <div class="top-right">
     <span class="top-username" id="topUsername"></span>
@@ -567,14 +571,25 @@ const sb = supabase.createClient(
 // ── STATE ──
 let USER=null, PROFILE=null
 let SONGS=[], QUEUE=[], QIDX=-1, CURSONG=null
+let SEARCH_SONGS=[]
 let FAVS=new Set(), PLS=[], CUR_PL=null
 let UP_AUDIO=null, UP_COVER=null, PENDING_PL=null
 const aud = document.getElementById('aud')
 aud.volume = 0.8
 
+// ── SCROLL PAGINATION STATES ──
+let HOME_OFFSET = 0
+let HOME_LOADING = false
+let HOME_HAS_MORE = true
+let CURRENT_GENRE = ''
+
+let SEARCH_OFFSET = 0
+let SEARCH_LOADING = false
+let SEARCH_HAS_MORE = true
+
 // ── AUDIUS INTEGRATION ──
 let AUDIUS_HOST = null;
-const AUDIUS_CACHE = new Map(); // id -> song object (for offline fav/playlist)
+const AUDIUS_CACHE = new Map(); 
 const AUDIUS_FALLBACK_HOSTS = [
   'https://discoveryprovider.audius.co',
   'https://discoveryprovider2.audius.co',
@@ -601,24 +616,20 @@ async function getAudiusHost() {
   }
   return AUDIUS_HOST;
 }
-// keep old name for compat
 const initAudius = getAudiusHost;
 
 // ── LOCAL STORAGE HELPERS ──
 function lsGet(k, def) { try { const v=localStorage.getItem(k); return v!==null?JSON.parse(v):def } catch { return def } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch {} }
 
-// Local (Audius) favorites stored by song ID
 let LOCAL_FAVS = new Set(lsGet('sw_favs', []));
-// Audius song metadata keyed by id (so favs/playlists survive refresh)
 let AUDIUS_STORE = lsGet('sw_audius_songs', {});
-// Audius songs per playlist: { [plId]: [songObj, ...] }
 let LOCAL_PL_SONGS = lsGet('sw_pl_songs', {});
 
 function saveLocalFavs() { lsSet('sw_favs', [...LOCAL_FAVS]) }
 function cacheAudiusSong(song) { AUDIUS_STORE[song.id]=song; lsSet('sw_audius_songs', AUDIUS_STORE) }
 function saveLocalPls()  { lsSet('sw_pl_songs', LOCAL_PL_SONGS) }
-function isFav(id) { return id.startsWith('audius_') ? LOCAL_FAVS.has(id) : FAVS.has(id) }
+function isFav(id) { return (id.startsWith('audius_') || id.startsWith('itunes_')) ? LOCAL_FAVS.has(id) : FAVS.has(id) }
 function updateFavCount() { document.getElementById('stFav').textContent = FAVS.size + LOCAL_FAVS.size }
 
 // ── PWA INSTALL ──
@@ -651,7 +662,6 @@ function toast(msg, type=''){
   t._t = setTimeout(() => t.className='toast', 3000)
 }
 
-// ── FORMAT TIME ──
 function fmt(s){ s=Math.floor(s||0); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}` }
 
 // ── AUTH ──
@@ -716,7 +726,7 @@ async function afterLogin(user){
   topAv.classList.remove('hidden')
   document.getElementById('signinBtn').classList.add('hidden')
   document.getElementById('logoutBtn').classList.remove('hidden')
-  await Promise.all([loadSongs(), loadFavs(), loadPls()])
+  await Promise.all([loadSongs('', false), loadFavs(), loadPls()])
   toast('Welcome back 👋','ok')
 }
 
@@ -732,11 +742,10 @@ async function logout(){
 }
 
 ;(async()=>{
-  // Init local fav count immediately (even before login)
   document.getElementById('stFav').textContent = LOCAL_FAVS.size
   const { data:{ session } } = await sb.auth.getSession()
   if(session) await afterLogin(session.user)
-  else await loadSongs()
+  else await loadSongs('', false)
 })()
 
 function authGo(view){
@@ -744,7 +753,6 @@ function authGo(view){
   go(view)
 }
 
-// ── NAV ──
 function go(view){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'))
   document.querySelectorAll('.ni,.bnav-item').forEach(n=>n.classList.remove('on'))
@@ -766,31 +774,54 @@ function goPl(id){
   CUR_PL=id; loadPlView(id)
 }
 
-// ── SONGS ──
-async function loadSongs(genre='') {
-  const grid = document.getElementById('homeGrid');
-  grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:44px 20px;color:var(--muted)"><div style="font-size:2rem;margin-bottom:10px;animation:spin 1s linear infinite;display:inline-block">⟳</div><br/>Loading songs…</div>`;
+// ── INFINITE SCROLL LOADER GENERATORS ──
+function showGridLoader(id) {
+  if(document.getElementById(id+'-loader-node')) return
+  const l = document.createElement('div')
+  l.id = id+'-loader-node'
+  l.style.cssText = 'grid-column:1/-1;text-align:center;padding:20px;color:var(--muted); font-weight:600;'
+  l.innerHTML = `<span style="display:inline-block;animation:spin 1s linear infinite;margin-right:8px">⟳</span> Loading tracks...`
+  document.getElementById(id).appendChild(l)
+}
+function hideGridLoader(id) {
+  const l = document.getElementById(id+'-loader-node')
+  if(l) l.remove()
+}
 
-  // 1. Load Local Supabase Songs
-  let q = sb.from('songs').select('*').order('created_at', {ascending: false})
-  if(genre && genre !== 'All') q = q.eq('genre', genre)
-  const { data } = await q
-  let localSongs = data || []
+// ── SONGS BLOCK (INFINITE SCROLL CAPABLE) ──
+async function loadSongs(genre='', append=false) {
+  if (HOME_LOADING) return
+  HOME_LOADING = true
 
-  // 2. Load Audius Songs (Trending or by Genre)
+  if(!append) {
+    HOME_OFFSET = 0
+    HOME_HAS_MORE = true
+    CURRENT_GENRE = genre
+    document.getElementById('homeGrid').innerHTML = `<div id="home-init-spinner" style="grid-column:1/-1;text-align:center;padding:44px 20px;color:var(--muted)"><div style="font-size:2rem;margin-bottom:10px;animation:spin 1s linear infinite;display:inline-block">⟳</div><br/>Loading channels…</div>`
+  } else {
+    showGridLoader('homeGrid')
+  }
+
+  const limitWindow = 16
+  let localSongs = []
+
+  if (HOME_OFFSET === 0) {
+    let q = sb.from('songs').select('*').order('created_at', {ascending: false})
+    if(genre && genre !== 'All') q = q.eq('genre', genre)
+    const { data } = await q
+    localSongs = data || []
+  }
+
   let audiusSongs = []
   try {
     const host = await getAudiusHost();
     if (host) {
-      let url = `${host}/v1/tracks/trending?app_name=SoundWave&limit=20`
+      let url = `${host}/v1/tracks/trending?app_name=SoundWave&limit=${limitWindow}&offset=${HOME_OFFSET}`
       if (genre && genre !== 'All') {
         const ag = GENRE_MAP[genre] || genre;
-        url = `${host}/v1/tracks/search?query=${encodeURIComponent(ag)}&genre=${encodeURIComponent(ag)}&app_name=SoundWave&limit=20`
+        url = `${host}/v1/tracks/search?query=${encodeURIComponent(ag)}&genre=${encodeURIComponent(ag)}&app_name=SoundWave&limit=${limitWindow}&offset=${HOME_OFFSET}`
       }
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-      const aRes = await fetch(url, { signal: controller.signal }).then(r => r.json());
-      clearTimeout(timeout);
+      const aRes = await fetch(url).then(r => r.json());
       audiusSongs = (aRes.data || []).map(t => {
         const song = {
           id: 'audius_' + t.id,
@@ -807,35 +838,73 @@ async function loadSongs(genre='') {
         return song;
       });
     }
-  } catch (e) {
-    console.warn('Audius fetch failed:', e.message);
+  } catch (e) { console.warn('Audius error:', e.message) }
+
+  // New Music API Engine: iTunes Public Previews Framework
+  let itunesSongs = []
+  try {
+    let term = (genre && genre !== 'All') ? genre : 'Top Hits'
+    const iRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&limit=${limitWindow}&offset=${HOME_OFFSET}&entity=song`).then(r => r.json())
+    itunesSongs = (iRes.results || []).map(t => ({
+      id: 'itunes_' + t.trackId,
+      title: t.trackName,
+      artist: t.artistName,
+      cover_url: t.artworkUrl100 ? t.artworkUrl100.replace('100x100bb', '400x400bb') : '',
+      audio_url: t.previewUrl,
+      genre: t.primaryGenreName || genre || '',
+      source: 'itunes',
+      plays: 0
+    }))
+  } catch(e) { console.warn('iTunes fallback exception:', e.message) }
+
+  hideGridLoader('homeGrid')
+  const spinnerNode = document.getElementById('home-init-spinner')
+  if(spinnerNode) spinnerNode.remove()
+
+  const aggregate = [...localSongs, ...audiusSongs, ...itunesSongs]
+  
+  if(aggregate.length === 0) {
+    HOME_HAS_MORE = false
+    if(!append) {
+      document.getElementById('homeGrid').innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-i">🎵</div><div class="empty-t">No songs found</div></div>`
+    }
+  } else {
+    if(append) {
+      SONGS = [...SONGS, ...aggregate]
+      renderGrid(aggregate, 'homeGrid', true)
+    } else {
+      SONGS = aggregate
+      renderGrid(SONGS, 'homeGrid', false)
+    }
+    HOME_OFFSET += limitWindow
   }
 
-  // 3. Merge and Render
-  SONGS = [...localSongs, ...audiusSongs]
   document.getElementById('songCount').textContent = SONGS.length
-  renderGrid(SONGS, 'homeGrid')
+  HOME_LOADING = false
 }
 
 function filterG(el,genre){
   document.querySelectorAll('.gc').forEach(c=>c.classList.remove('on'))
-  el.classList.add('on'); loadSongs(genre)
+  el.classList.add('on'); loadSongs(genre, false)
 }
 
-function renderGrid(songs, id) {
+function renderGrid(songs, id, append=false) {
   const g = document.getElementById(id)
-  if(!songs.length){
+  if(!songs.length && !append){
     g.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-i">🎵</div><div class="empty-t">No songs found</div><div class="empty-s">Try a different genre or keyword</div></div>`
     return
   }
-  g.innerHTML = songs.map(s => {
+
+  const codeBlocks = songs.map(s => {
     const fav = isFav(s.id)
     const isOwner = USER && USER.id === s.user_id
     const isAudius = s.source === 'audius'
+    const isItunes = s.source === 'itunes'
+    const badgeMarkup = isAudius ? `<div class="src-badge audius">Audius</div>` : (isItunes ? `<div class="src-badge itunes">Apple Pre</div>` : '')
     
     return `
     <div class="sc" onclick="playById('${s.id}')">
-      ${isAudius ? `<div class="src-badge audius">Audius</div>` : ''}
+      ${badgeMarkup}
       ${s.cover_url ? `<img class="sc-img" src="${s.cover_url}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
       <div class="sc-ph" style="${s.cover_url?'display:none':''}">🎵</div>
       <div class="sc-play">
@@ -850,10 +919,10 @@ function renderGrid(songs, id) {
         <button class="ib" onclick="event.stopPropagation();openPlModal('${s.id}')">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/></svg>
         </button>
-        ${!isAudius ? `<button class="ib" onclick="event.stopPropagation();dlSong('${s.id}','${s.title.replace(/'/g,"\\'")}')">
+        ${(!isAudius && !isItunes) ? `<button class="ib" onclick="event.stopPropagation();dlSong('${s.id}','${s.title.replace(/'/g,"\\'")}')">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>` : ''}
-        ${isOwner && !isAudius ? `<button class="ib" onclick="event.stopPropagation();delSong('${s.id}')" title="Delete" style="background:rgba(255,68,102,0.75)">
+        ${isOwner && !isAudius && !isItunes ? `<button class="ib" onclick="event.stopPropagation();delSong('${s.id}')" title="Delete" style="background:rgba(255,68,102,0.75)">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
         </button>` : ''}
       </div>
@@ -866,15 +935,18 @@ function renderGrid(songs, id) {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="${fav?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>
         <button class="ib" onclick="event.stopPropagation();openPlModal('${s.id}')" style="width:28px;height:28px">+</button>
-        ${!isAudius ? `<button class="ib" onclick="event.stopPropagation();dlSong('${s.id}','${s.title.replace(/'/g,"\\'")}')">
+        ${(!isAudius && !isItunes) ? `<button class="ib" onclick="event.stopPropagation();dlSong('${s.id}','${s.title.replace(/'/g,"\\'")}')">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </button>` : ''}
-        ${isOwner && !isAudius ? `<button class="ib" onclick="event.stopPropagation();delSong('${s.id}')" style="width:28px;height:28px;background:rgba(255,68,102,0.75)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
         </button>` : ''}
       </div>
     </div>`
   }).join('')
+
+  if(append) {
+    g.insertAdjacentHTML('beforeend', codeBlocks)
+  } else {
+    g.innerHTML = codeBlocks
+  }
 }
 
 function renderList(songs, cid, showDel = false) {
@@ -882,13 +954,15 @@ function renderList(songs, cid, showDel = false) {
   el.innerHTML = songs.map((s, i) => {
     const fav = isFav(s.id), playing = CURSONG?.id === s.id
     const isAudius = s.source === 'audius'
+    const isItunes = s.source === 'itunes'
+    const displayLabel = isAudius ? 'AUDIUS' : (isItunes ? 'APPLE' : '')
     
     return `
     <div class="sr ${playing?'on':''}" onclick="playById('${s.id}')">
       <div class="sr-n">${playing?'▶':i+1}</div>
       ${s.cover_url?`<img class="sr-img" src="${s.cover_url}" onerror="this.style.display='none'">`:`<div class="sr-ph">🎵</div>`}
       <div class="sr-info">
-        <div class="sr-title">${s.title} ${isAudius ? '<span style="color:#cc00ff;font-size:0.6rem;vertical-align:top;margin-left:4px">AUDIUS</span>' : ''}</div>
+        <div class="sr-title">${s.title} ${displayLabel ? `<span style="color:var(--a1);font-size:0.6rem;vertical-align:top;margin-left:4px">${displayLabel}</span>` : ''}</div>
         <div class="sr-sub">${s.artist}${s.genre?` · <span style="color:var(--a1);font-size:.62rem">${s.genre}</span>`:''}</div>
       </div>
       <div class="sr-acts">
@@ -896,10 +970,7 @@ function renderList(songs, cid, showDel = false) {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="${fav?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>
         <button class="rb" onclick="event.stopPropagation();openPlModal('${s.id}')">+</button>
-        ${!isAudius ? `<button class="rb" onclick="event.stopPropagation();dlSong('${s.id}','${s.title.replace(/'/g,"\\'")}')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </button>` : ''}
-        ${showDel && !isAudius ? `<button class="rb del" onclick="event.stopPropagation();delSong('${s.id}')">
+        ${showDel && !isAudius && !isItunes ? `<button class="rb del" onclick="event.stopPropagation();delSong('${s.id}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
         </button>` : ''}
       </div>
@@ -909,11 +980,18 @@ function renderList(songs, cid, showDel = false) {
 
 // ── PLAYER ──
 function playById(id){
-  QUEUE=[...SONGS]; QIDX=QUEUE.findIndex(s=>s.id===id)
-  if(QIDX===-1){
-    // might be from favs/playlist – look in AUDIUS_CACHE or AUDIUS_STORE
-    const s = AUDIUS_CACHE.get(id) || AUDIUS_STORE[id]
-    QUEUE = s ? [s] : []; QIDX = 0
+  let target = SONGS.find(s=>s.id===id) || SEARCH_SONGS.find(s=>s.id===id) || AUDIUS_CACHE.get(id) || AUDIUS_STORE[id]
+  if(document.getElementById('view-home').classList.contains('on')) {
+    QUEUE = [...SONGS]
+  } else if (document.getElementById('view-search').classList.contains('on')) {
+    QUEUE = [...SEARCH_SONGS]
+  } else {
+    QUEUE = target ? [target] : []
+  }
+  QIDX = QUEUE.findIndex(s=>s.id===id)
+  if(QIDX === -1 && target) {
+    QUEUE.push(target)
+    QIDX = QUEUE.length - 1
   }
   startPlay()
 }
@@ -921,14 +999,12 @@ function playById(id){
 function startPlay(){
   const s=QUEUE[QIDX]; if(!s) return
   CURSONG=s; aud.src=s.audio_url; aud.load(); aud.play().catch(e=>{
-    console.warn('Playback error:', e.message);
-    // If Audius stream fails, show a user-friendly message
-    if(s.source==='audius'){
-      toast('Stream unavailable – try next song','err')
-    }
+    console.warn('Playback block handled:', e.message);
+    toast('Preview access restriction, next track skipping...','err')
+    setTimeout(nextSong, 1000)
   })
   setPlayUI(true); updateBar(s)
-  if (!s.id.startsWith('audius_')) {
+  if (!s.id.startsWith('audius_') && !s.id.startsWith('itunes_')) {
     sb.from('songs').update({plays:(s.plays||0)+1}).eq('id',s.id)
   }
 }
@@ -959,16 +1035,30 @@ function nextSong(){
   else QIDX=(QIDX+1)%QUEUE.length;
   startPlay()
 }
+function prevSong() {
+  if(!QUEUE.length) return;
+  QIDX = QIDX - 1 < 0 ? QUEUE.length - 1 : QIDX - 1
+  startPlay()
+}
+function skip(sec) {
+  if(!aud.src) return
+  aud.currentTime += sec
+}
+function seek(e) {
+  if(!aud.duration) return
+  const rect = document.getElementById('ptrack').getBoundingClientRect()
+  const pct = (e.clientX - rect.left) / rect.width
+  aud.currentTime = pct * aud.duration
+}
 function toggleShuffle(){
   SHUFFLE = !SHUFFLE;
-  const btn = document.getElementById('shuffleBtn');
-  btn.style.color = SHUFFLE ? 'var(--a1)' : '';
+  document.getElementById('shuffleBtn').style.color = SHUFFLE ? 'var(--a1)' : '';
   toast(SHUFFLE ? 'Shuffle on 🔀' : 'Shuffle off', 'ok');
 }
 
 aud.addEventListener('error', () => {
-  if(CURSONG?.source==='audius') toast('Stream error – skipping…','err');
-  setTimeout(nextSong, 1500);
+  toast('Track skipped automatically','err');
+  setTimeout(nextSong, 1000);
 });
 
 aud.addEventListener('timeupdate',()=>{
@@ -990,9 +1080,8 @@ async function loadFavs(){
 }
 
 async function toggleFav(id, btn){
-  // Audius tracks → localStorage
-  if(id.startsWith('audius_')){
-    const song = AUDIUS_CACHE.get(id);
+  if(id.startsWith('audius_') || id.startsWith('itunes_')){
+    const song = AUDIUS_CACHE.get(id) || SEARCH_SONGS.find(x=>x.id===id) || SONGS.find(x=>x.id===id);
     if(song) cacheAudiusSong(song);
     if(LOCAL_FAVS.has(id)){
       LOCAL_FAVS.delete(id); saveLocalFavs()
@@ -1027,7 +1116,7 @@ async function toggleFavCurrent(){
   const id = CURSONG.id
   const btn = document.getElementById('pFavBtn')
 
-  if(id.startsWith('audius_')){
+  if(id.startsWith('audius_') || id.startsWith('itunes_')){
     cacheAudiusSong(CURSONG)
     if(LOCAL_FAVS.has(id)){
       LOCAL_FAVS.delete(id); saveLocalFavs(); btn.classList.remove('on'); toast('Removed from favorites')
@@ -1054,9 +1143,8 @@ async function loadFavList(){
     const { data } = await sb.from('favorites').select('songs(*)').eq('user_id',USER.id)
     songs.push(...(data||[]).map(f=>f.songs).filter(Boolean))
   }
-  // Audius favorites from localStorage
   for(const id of LOCAL_FAVS){
-    const song = AUDIUS_CACHE.get(id) || AUDIUS_STORE[id]
+    const song = AUDIUS_CACHE.get(id) || AUDIUS_STORE[id] || SONGS.find(x=>x.id===id) || SEARCH_SONGS.find(x=>x.id===id)
     if(song) songs.push(song)
   }
   const empty=document.getElementById('favEmpty')
@@ -1110,8 +1198,8 @@ async function createPlFromModal(){
 }
 
 async function addToPl(plId, songId){
-  if(songId.startsWith('audius_')){
-    const song = AUDIUS_CACHE.get(songId) || AUDIUS_STORE[songId]
+  if(songId.startsWith('audius_') || songId.startsWith('itunes_')){
+    const song = AUDIUS_CACHE.get(songId) || AUDIUS_STORE[songId] || SONGS.find(x=>x.id===songId) || SEARCH_SONGS.find(x=>x.id===songId)
     if(!song){ closePlModal(); return toast('Song data not found','err') }
     cacheAudiusSong(song)
     if(!LOCAL_PL_SONGS[plId]) LOCAL_PL_SONGS[plId] = []
@@ -1156,9 +1244,9 @@ async function deletePlaylist(){
   toast('Playlist deleted','ok')
 }
 
-// ── SEARCH ──
+// ── SEARCHES BLOCK (INFINITE SCROLL CAPABLE) ──
 let _searchTimer = null;
-async function doSearch() {
+async function doSearch(append = false) {
   const q = document.getElementById('searchQ').value.trim().toLowerCase()
   go('search')
   
@@ -1168,27 +1256,35 @@ async function doSearch() {
     return 
   }
 
-  clearTimeout(_searchTimer);
-  _searchTimer = setTimeout(async () => {
-    document.getElementById('searchEmpty').classList.add('hidden');
-    document.getElementById('searchGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">Searching Supabase & Audius…</div>';
+  if (SEARCH_LOADING) return
 
-    // 1. Search Local (already-loaded songs)
-    const localRes = SONGS.filter(s => 
-      s.source !== 'audius' && 
-      (s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q) || (s.genre||'').toLowerCase().includes(q))
-    )
+  if(!append) {
+    SEARCH_OFFSET = 0
+    SEARCH_HAS_MORE = true
+    document.getElementById('searchEmpty').classList.add('hidden')
+    document.getElementById('searchGrid').innerHTML = '<div id="search-init-spinner" style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">Searching Supabase, Audius & Apple Preview APIs…</div>'
+  } else {
+    showGridLoader('searchGrid')
+  }
 
-    // 2. Search Audius
+  const runSearchContext = async () => {
+    SEARCH_LOADING = true
+    const searchLimit = 16
+
+    let localRes = []
+    if (SEARCH_OFFSET === 0) {
+      localRes = SONGS.filter(s => 
+        s.source !== 'audius' && s.source !== 'itunes' &&
+        (s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q) || (s.genre||'').toLowerCase().includes(q))
+      )
+    }
+
     let audiusRes = []
     try {
       const host = await getAudiusHost();
       if (host) {
-        const url = `${host}/v1/tracks/search?query=${encodeURIComponent(q)}&app_name=SoundWave&limit=15`
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000);
-        const aRes = await fetch(url, { signal: controller.signal }).then(r => r.json())
-        clearTimeout(timeout);
+        const url = `${host}/v1/tracks/search?query=${encodeURIComponent(q)}&app_name=SoundWave&limit=${searchLimit}&offset=${SEARCH_OFFSET}`
+        const aRes = await fetch(url).then(r => r.json())
         audiusRes = (aRes.data || []).map(t => {
           const song = {
             id: 'audius_' + t.id,
@@ -1204,15 +1300,69 @@ async function doSearch() {
           return song;
         });
       }
-    } catch(e) { console.warn('Audius search failed:', e.message) }
+    } catch(e) { console.warn('Audius error handled:', e.message) }
 
-    // 3. Merge and Render
-    const res = [...localRes, ...audiusRes]
-    document.getElementById('searchGrid').innerHTML = ''
-    document.getElementById('searchEmpty').classList.toggle('hidden', res.length > 0)
-    renderGrid(res, 'searchGrid')
-  }, 400);
+    let itunesRes = []
+    try {
+      const iRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&limit=${searchLimit}&offset=${SEARCH_OFFSET}&entity=song`).then(r => r.json())
+      itunesRes = (iRes.results || []).map(t => ({
+        id: 'itunes_' + t.trackId,
+        title: t.trackName,
+        artist: t.artistName,
+        cover_url: t.artworkUrl100 ? t.artworkUrl100.replace('100x100bb', '400x400bb') : '',
+        audio_url: t.previewUrl,
+        genre: t.primaryGenreName || '',
+        source: 'itunes',
+        plays: 0
+      }))
+    } catch(e) { console.warn('iTunes error handled:', e.message) }
+
+    hideGridLoader('searchGrid')
+    const initSpinner = document.getElementById('search-init-spinner')
+    if(initSpinner) initSpinner.remove()
+
+    const incoming = [...localRes, ...audiusRes, ...itunesRes]
+    if(incoming.length === 0) {
+      SEARCH_HAS_MORE = false
+    } else {
+      if (append) {
+        SEARCH_SONGS = [...SEARCH_SONGS, ...incoming]
+        renderGrid(incoming, 'searchGrid', true)
+      } else {
+        SEARCH_SONGS = incoming
+        renderGrid(SEARCH_SONGS, 'searchGrid', false)
+      }
+      SEARCH_OFFSET += searchLimit
+    }
+
+    const currentMatchCount = document.getElementById('searchGrid').querySelectorAll('.sc').length
+    document.getElementById('searchEmpty').classList.toggle('hidden', currentMatchCount > 0)
+    SEARCH_LOADING = false
+  }
+
+  clearTimeout(_searchTimer)
+  if(append) {
+    await runSearchContext()
+  } else {
+    _searchTimer = setTimeout(runSearchContext, 400)
+  }
 }
+
+// ── GLOBAL SCROLL Sentinel INTERACTION ──
+document.querySelector('.content').addEventListener('scroll', (e) => {
+  const container = e.target
+  if (container.scrollHeight - container.scrollTop <= container.clientHeight + 160) {
+    if (document.getElementById('view-home').classList.contains('on')) {
+      if (!HOME_LOADING && HOME_HAS_MORE) {
+        loadSongs(CURRENT_GENRE, true)
+      }
+    } else if (document.getElementById('view-search').classList.contains('on')) {
+      if (!SEARCH_LOADING && SEARCH_HAS_MORE) {
+        doSearch(true)
+      }
+    }
+  }
+})
 
 // ── UPLOAD ──
 function onAudioPick(inp){
@@ -1272,7 +1422,7 @@ async function doUpload(){
 
     setUpStatus('Done! 🎉',100)
     toast('Song uploaded! 🎉','ok')
-    await loadSongs()   
+    await loadSongs('', false)   
     await loadProfile() 
 
     setTimeout(()=>{
@@ -1294,7 +1444,6 @@ async function doUpload(){
   finally{ btn.disabled=false; btn.textContent='Upload Song' }
 }
 
-// ── DOWNLOAD ──
 async function dlSong(id,title){
   const song=SONGS.find(s=>s.id===id); if(!song) return
   toast('Downloading...','ok')
@@ -1310,13 +1459,12 @@ async function dlSong(id,title){
   }catch(e){ toast('Download failed','err') }
 }
 
-// ── DELETE ──
 async function delSong(id){
   if(!confirm('Delete this song permanently?')) return
   const { error } = await sb.from('songs').delete().eq('id',id)
   if(error){ toast('Delete failed: '+error.message,'err'); return }
   toast('Song deleted','ok')
-  await loadSongs()   
+  await loadSongs('', false)   
   await loadProfile() 
 }
 
