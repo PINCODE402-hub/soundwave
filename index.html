@@ -1184,25 +1184,13 @@ function playById(id){
   startPlay()
 }
 
-async function startPlay(){
-  // Check if the device is online
-  if (!navigator.onLine) {
-    toast('No internet connection. Please check your settings.', 'err');
-    return;
-  }
-
+async function startPlay() {
   const s = QUEUE[QIDX];
-  if(!s) return;
-  
-  aud.src = s.audio_url;
-  aud.load();
-  aud.play().catch(e => {
-    console.warn('Playback block handled:', e.message);
-    toast('Playback error. Please check your connection.', 'err');
-    setTimeout(nextSong, 1000);
-  });
+  if (!s) return;
 
-  // Intercept Stream and Use Local IndexedDB Blob if available
+  // 1. Determine Source (Priority: IndexedDB/Offline > Online URL)
+  let audioSrc = s.audio_url;
+
   try {
     const offlineRec = await IDB.get(s.id);
     if (offlineRec && offlineRec.blob) {
@@ -1210,20 +1198,40 @@ async function startPlay(){
       s.blobUrl = URL.createObjectURL(offlineRec.blob);
       audioSrc = s.blobUrl;
     }
-  } catch(e) {}
+  } catch (e) {
+    console.error('IDB Fetch error:', e);
+  }
 
-  CURSONG=s; aud.src=audioSrc; aud.load(); aud.play().catch(e=>{
-    console.warn('Playback block handled:', e.message);
-    toast('Preview access restriction, next track skipping...','err')
-    setTimeout(nextSong, 1000)
-  })
-  
-  setPlayUI(true); updateBar(s)
-  if (!s.id.startsWith('audius_') && !s.id.startsWith('itunes_')) {
-    sb.from('songs').update({plays:(s.plays||0)+1}).eq('id',s.id)
+  // 2. Offline check (only if we don't have a local blob)
+  if (!navigator.onLine && audioSrc === s.audio_url) {
+    toast('No internet connection.', 'err');
+    return;
+  }
+
+  // 3. Set Source and UI
+  aud.src = audioSrc;
+  aud.load();
+  setPlayUI(true);
+  updateBar(s);
+
+  // 4. Play with clean Error Handling
+  try {
+    await aud.play();
+    
+    // Update play count (only if streaming, not local)
+    if (!s.id.startsWith('audius_') && !s.id.startsWith('itunes_')) {
+      sb.from('songs').update({ plays: (s.plays || 0) + 1 }).eq('id', s.id);
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return; // Ignore "interrupted by load"
+
+    console.warn('Playback error:', e.message);
+    toast('Playback error. Skipping...', 'err');
+    
+    // Only auto-skip if we actually failed to play
+    setTimeout(nextSong, 1000);
   }
 }
-
 function updateBar(s){
   document.getElementById('pTitle').textContent  = s.title
   document.getElementById('pArtist').textContent = s.artist
