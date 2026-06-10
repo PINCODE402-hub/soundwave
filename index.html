@@ -24,12 +24,6 @@
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
 
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:url" content="https://pincode402-hub.github.io/soundwave/"/>
-<meta name="twitter:title" content="SoundWave | Share & Discover Music"/>
-<meta name="twitter:description" content="Listen to fresh tracks, upload your own beats, and build your ultimate playlist on SoundWave."/>
-<meta name="twitter:image" content="web-app-manifest-512x512.png"/>
-
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
 <link rel="icon" href="favicon.ico"/>
@@ -641,7 +635,7 @@ const sb = supabase.createClient(
 let USER=null, PROFILE=null
 let SONGS=[], QUEUE=[], QIDX=-1, CURSONG=null
 let SEARCH_SONGS=[], OFFLINE_SONGS=[]
-let ACTIVE_DOWNLOADS = {} // Track active downloads by song ID
+let ACTIVE_DOWNLOADS = {} 
 let FAVS=new Set(), PLS=[], CUR_PL=null
 let UP_AUDIO=null, UP_COVER=null, PENDING_PL=null
 const aud = document.getElementById('aud')
@@ -671,6 +665,7 @@ const GENRE_MAP = {
   'Trap':'Hip-Hop/Rap', 'Electronic':'Electronic', 'Other':''
 };
 
+// FIX: Randomly select a node to prevent being stuck on a failing/banned node
 async function getAudiusHost() {
   if (AUDIUS_HOST) return AUDIUS_HOST;
   try {
@@ -680,9 +675,9 @@ async function getAudiusHost() {
     clearTimeout(timeout);
     const json = await res.json();
     const hosts = json.data || [];
-    AUDIUS_HOST = hosts[0] || AUDIUS_FALLBACK_HOSTS[0];
+    AUDIUS_HOST = hosts.length ? hosts[Math.floor(Math.random() * hosts.length)] : AUDIUS_FALLBACK_HOSTS[0];
   } catch {
-    AUDIUS_HOST = AUDIUS_FALLBACK_HOSTS[0];
+    AUDIUS_HOST = AUDIUS_FALLBACK_HOSTS[Math.floor(Math.random() * AUDIUS_FALLBACK_HOSTS.length)];
   }
   return AUDIUS_HOST;
 }
@@ -819,81 +814,49 @@ async function logout(){
 }
 
 ;(async()=>{
+  document.getElementById('stFav').textContent = LOCAL_FAVS.size
 
-  document.getElementById('stFav').textContent =
-    LOCAL_FAVS.size
-
-  const offlineUser =
-    JSON.parse(localStorage.getItem('sw_user'));
+  const offlineUser = JSON.parse(localStorage.getItem('sw_user'));
 
   // OFFLINE STARTUP
   if (!navigator.onLine && offlineUser) {
-
-    USER = offlineUser;
-    PROFILE = offlineUser;
-
-    document.getElementById('authWrap')
-      .classList.add('hidden');
-
-    document.getElementById('topUsername')
-      .textContent = '@' + offlineUser.username;
-
-    document.getElementById('topAvatar')
-      .classList.remove('hidden');
-
-    document.getElementById('topAvatar')
-      .textContent =
-      offlineUser.username[0].toUpperCase();
-
-    document.getElementById('signinBtn')
-      .classList.add('hidden');
-
-    document.getElementById('logoutBtn')
-      .classList.remove('hidden');
-
+    USER = offlineUser; PROFILE = offlineUser;
+    document.getElementById('authWrap').classList.add('hidden');
+    document.getElementById('topUsername').textContent = '@' + offlineUser.username;
+    document.getElementById('topAvatar').classList.remove('hidden');
+    document.getElementById('topAvatar').textContent = offlineUser.username[0].toUpperCase();
+    document.getElementById('signinBtn').classList.add('hidden');
+    document.getElementById('logoutBtn').classList.remove('hidden');
     await loadDownloads();
-
     go('downloads');
-
     toast('Offline Mode', 'ok');
-
     return;
   }
 
   // ONLINE STARTUP
   try {
+    // FIX: Verify session safely and purge local token on AuthError 400
+    const { data, error } = await sb.auth.getSession();
+    if (error) {
+       await sb.auth.signOut(); // Purges invalid local tokens
+       throw error;
+    }
 
-    const { data:{ session } } =
-      await sb.auth.getSession();
-
-    if(session){
-      await afterLogin(session.user);
+    if(data.session){
+      await afterLogin(data.session.user);
     }else{
       await loadSongs('', false);
     }
 
   } catch(err) {
-
-    console.warn('Startup failed:', err);
-
+    console.warn('Startup session check failed, returning to default state:', err);
     if(offlineUser){
-
-      USER = offlineUser;
-      PROFILE = offlineUser;
-
-      await loadDownloads();
-
-      go('downloads');
-
-      toast('Offline Mode', 'ok');
-
+      USER = offlineUser; PROFILE = offlineUser;
+      await loadDownloads(); go('downloads'); toast('Offline Mode', 'ok');
     } else {
-
       loadSongs('', false);
-
     }
   }
-
 })();
 
 function authGo(view){
@@ -923,7 +886,6 @@ function goPl(id){
   CUR_PL=id; loadPlView(id)
 }
 
-// ── INFINITE SCROLL LOADER GENERATORS ──
 function showGridLoader(id) {
   if(document.getElementById(id+'-loader-node')) return
   const l = document.createElement('div')
@@ -1114,7 +1076,7 @@ function renderList(songs, cid, showDel = false) {
     return `
     <div class="sr ${playing?'on':''}" ${!isDownloading ? `onclick="playById('${s.id}')"` : ''}>
       <div class="sr-n">${playing?'▶':i+1}</div>
-      ${s.cover_url?`<img class="sr-img" src="${s.cover_url}" onerror="this.style.display='none'">`:`<div class="sr-ph">🎵</div>`}
+      ${s.cover_url?`<img class="sr-img" src="${s.cover_url}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`:`<div class="sr-ph">🎵</div>`}
       <div class="sr-info">
         <div class="sr-title">${s.title} ${displayLabel ? `<span style="color:var(--a1);font-size:0.6rem;vertical-align:top;margin-left:4px">${displayLabel}</span>` : ''}</div>
         <div class="sr-sub">${s.artist}${s.genre?` · <span style="color:var(--a1);font-size:.62rem">${s.genre}</span>`:''}</div>
@@ -1178,7 +1140,6 @@ async function saveOffline(id) {
   
   toast('Downloading offline... ⏳', 'ok');
   
-  // Track active download
   ACTIVE_DOWNLOADS[id] = { progress: 0, text: 'Connecting...', song: song };
   if(document.getElementById('view-downloads').classList.contains('on')) loadDownloads();
   
@@ -1203,15 +1164,13 @@ async function saveOffline(id) {
         pct = Math.round((loaded/total)*100);
         txt = pct + '%';
       } else {
-        // Indeterminate/Missing content-length
         txt = (loaded / (1024*1024)).toFixed(1) + ' MB';
-        pct = 100; // Keep bar full as pulse indicator
+        pct = 100; 
       }
       
       ACTIVE_DOWNLOADS[id].progress = pct;
       ACTIVE_DOWNLOADS[id].text = txt;
       
-      // Update DOM directly for performance instead of full render
       const pFill = document.getElementById(`dl-prog-fill-${id}`);
       const pTxt = document.getElementById(`dl-prog-txt-${id}`);
       if(pFill) pFill.style.width = pct + '%';
@@ -1248,7 +1207,6 @@ function playById(id){
   } else if (document.getElementById('view-search').classList.contains('on')) {
     QUEUE = [...SEARCH_SONGS]
   } else if (document.getElementById('view-downloads').classList.contains('on')) {
-    // Only queue non-downloading songs
     QUEUE = OFFLINE_SONGS;
   } else {
     QUEUE = target ? [target] : []
@@ -1265,8 +1223,8 @@ function playById(id){
 async function startPlay() {
   const s = QUEUE[QIDX];
   if (!s) return;
+  CURSONG = s;
 
-  // 1. Determine Source (Priority: IndexedDB/Offline > Online URL)
   let audioSrc = s.audio_url;
 
   try {
@@ -1280,36 +1238,28 @@ async function startPlay() {
     console.error('IDB Fetch error:', e);
   }
 
-  // 2. Offline check (only if we don't have a local blob)
   if (!navigator.onLine && audioSrc === s.audio_url) {
     toast('No internet connection.', 'err');
     return;
   }
 
-  // 3. Set Source and UI
   aud.src = audioSrc;
   aud.load();
   setPlayUI(true);
   updateBar(s);
 
-  // 4. Play with clean Error Handling
   try {
     await aud.play();
-    
-    // Update play count (only if streaming, not local)
     if (!s.id.startsWith('audius_') && !s.id.startsWith('itunes_')) {
       sb.from('songs').update({ plays: (s.plays || 0) + 1 }).eq('id', s.id);
     }
   } catch (e) {
-    if (e.name === 'AbortError') return; // Ignore "interrupted by load"
-
-    console.warn('Playback error:', e.message);
-    toast('Playback error. Skipping...', 'err');
-    
-    // Only auto-skip if we actually failed to play
-    setTimeout(nextSong, 1000);
+    if (e.name === 'AbortError') return; 
+    console.warn('Initial playback error:', e.message);
+    // If it fails immediately (often the case with 403 on standard play start), the onerror listener will handle the recovery.
   }
 }
+
 function updateBar(s){
   document.getElementById('pTitle').textContent  = s.title
   document.getElementById('pArtist').textContent = s.artist
@@ -1357,8 +1307,27 @@ function toggleShuffle(){
   toast(SHUFFLE ? 'Shuffle on 🔀' : 'Shuffle off', 'ok');
 }
 
-aud.addEventListener('error', () => {
-  toast('Track skipped automatically','err');
+// FIX: Added recovery mechanism for Audius 403 / broken stream errors
+aud.addEventListener('error', async () => {
+  const current = QUEUE[QIDX];
+  if (current && current.source === 'audius' && !current.isOffline) {
+    console.warn("Audius stream failed. Retrying with a new node...");
+    AUDIUS_HOST = null; // Invalidate current bad host
+    const newHost = await getAudiusHost();
+    const freshUrl = `${newHost}/v1/tracks/${current.audius_id}/stream?app_name=SoundWave`;
+    
+    // Only attempt recovery once per track to prevent infinite loops
+    if (aud.src !== freshUrl) {
+      aud.src = freshUrl;
+      aud.play().catch(() => {
+        toast('Stream permanently unavailable. Skipping...', 'err');
+        setTimeout(nextSong, 1000);
+      });
+      return; 
+    }
+  }
+  
+  toast('Track skipped automatically', 'err');
   setTimeout(nextSong, 1000);
 });
 
@@ -1825,14 +1794,6 @@ async function uploadProfilePic(input){
   } catch(e){ toast('Failed: '+e.message,'err') }
   input.value='' 
 }
-
-// ── KEYBOARD ──
-document.addEventListener('keydown',e=>{
-  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return
-  if(e.code==='Space'){e.preventDefault();togglePlay()}
-  if(e.code==='ArrowRight') skip(10)
-  if(e.code==='ArrowLeft')  skip(-10)
-})
 </script>
 </body>
 </html>
