@@ -88,7 +88,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 /* BOTTOM NAV — mobile only */
 .bottom-nav{position:fixed;bottom:var(--player-h);left:0;right:0;height:var(--nav-h);background:rgba(10,10,20,0.97);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:100;backdrop-filter:blur(20px)}
 @media(min-width:768px){.bottom-nav{display:none}}
-.bnav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--muted);font-size:.6rem;font-weight:600;padding:6px 12px;border-radius:10px;transition:color .2s;text-transform:uppercase;letter-spacing:.5px}
+.bnav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--muted);font-size:.55rem;font-weight:600;padding:6px 4px;border-radius:10px;transition:color .2s;text-transform:uppercase;letter-spacing:.5px}
 .bnav-item svg{transition:transform .2s}
 .bnav-item.on{color:var(--a1)}
 .bnav-item.on svg{transform:scale(1.1)}
@@ -139,11 +139,16 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .sr-info{flex:1;min-width:0}
 .sr-title{font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sr-sub{font-size:.68rem;color:var(--muted)}
-.sr-acts{display:flex;gap:4px;flex-shrink:0}
+.sr-acts{display:flex;gap:4px;flex-shrink:0;align-items:center}
 .rb{width:28px;height:28px;border-radius:50%;background:none;border:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .2s;flex-shrink:0}
 .rb:hover{color:var(--txt)}
 .rb.fav.on{color:var(--a2)}
 .rb.del:hover{color:var(--red)}
+
+/* DOWNLOAD PROGRESS BARS */
+.dl-prog-wrap { width: 100%; max-width: 150px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-top: 5px; }
+.dl-prog-fill { height: 100%; background: var(--green); width: 0%; transition: width 0.15s linear; box-shadow: 0 0 8px var(--green); }
+.dl-prog-txt { font-size: 0.58rem; color: var(--green); font-weight: 700; margin-top: 3px; }
 
 /* UPLOAD */
 .uform{max-width:520px}
@@ -372,6 +377,9 @@ audio{display:none}
     <div class="ni" id="ni-favs" onclick="authGo('favs')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Favorites
     </div>
+    <div class="ni" id="ni-downloads" onclick="authGo('downloads')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17V3"/><path d="M6 11l6 6 6-6"/><path d="M19 21H5"/></svg>Offline
+    </div>
     <div class="ni" id="ni-profile" onclick="authGo('profile')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile
     </div>
@@ -454,6 +462,12 @@ audio{display:none}
       <div class="slist" id="favList"></div>
       <div class="empty hidden" id="favEmpty"><div class="empty-i">❤️</div><div class="empty-t">No favorites yet</div><div class="empty-s">Heart a song to save it here</div></div>
     </div>
+    
+    <div class="view" id="view-downloads">
+      <div class="ph"><div class="pt">⬇️ Offline Library</div><div class="ps">Songs saved to your device for offline playback</div></div>
+      <div class="slist" id="dlList"></div>
+      <div class="empty hidden" id="dlEmpty"><div class="empty-i">⬇️</div><div class="empty-t">No offline songs</div><div class="empty-s">Download songs to play them without data</div></div>
+    </div>
 
     <div class="view" id="view-playlist">
       <div class="pl-head">
@@ -514,6 +528,10 @@ audio{display:none}
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
     Favorites
   </div>
+  <div class="bnav-item" id="bn-downloads" onclick="authGo('downloads')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17V3"/><path d="M6 11l6 6 6-6"/><path d="M19 21H5"/></svg>
+    Offline
+  </div>
   <div class="bnav-item" id="bn-profile" onclick="authGo('profile')">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     Profile
@@ -562,6 +580,57 @@ audio{display:none}
 <audio id="aud"></audio>
 
 <script>
+// ── INDEXEDDB FOR OFFLINE STORAGE ──
+const IDB = {
+  db: null,
+  init() {
+    return new Promise((res, rej) => {
+      if (this.db) return res();
+      const req = indexedDB.open('SW_Offline', 1);
+      req.onupgradeneeded = e => {
+        e.target.result.createObjectStore('downloads', { keyPath: 'id' });
+      };
+      req.onsuccess = e => { this.db = e.target.result; res(); };
+      req.onerror = rej;
+    });
+  },
+  async save(song, blob) {
+    await this.init();
+    return new Promise((res, rej) => {
+      const tx = this.db.transaction('downloads', 'readwrite');
+      tx.objectStore('downloads').put({ id: song.id, song, blob });
+      tx.oncomplete = res; tx.onerror = rej;
+    });
+  },
+  async getAll() {
+    await this.init();
+    return new Promise((res, rej) => {
+      const tx = this.db.transaction('downloads', 'readonly');
+      const req = tx.objectStore('downloads').getAll();
+      req.onsuccess = e => res(e.target.result);
+      req.onerror = rej;
+    });
+  },
+  async get(id) {
+    await this.init();
+    return new Promise((res, rej) => {
+      const tx = this.db.transaction('downloads', 'readonly');
+      const req = tx.objectStore('downloads').get(id);
+      req.onsuccess = e => res(e.target.result);
+      req.onerror = rej;
+    });
+  },
+  async delete(id) {
+    await this.init();
+    return new Promise((res, rej) => {
+      const tx = this.db.transaction('downloads', 'readwrite');
+      tx.objectStore('downloads').delete(id);
+      tx.oncomplete = res; tx.onerror = rej;
+    });
+  }
+};
+IDB.init().catch(console.warn);
+
 // ── SUPABASE ──
 const sb = supabase.createClient(
   'https://ttfvxxjuemwqyrigsrap.supabase.co',
@@ -571,7 +640,8 @@ const sb = supabase.createClient(
 // ── STATE ──
 let USER=null, PROFILE=null
 let SONGS=[], QUEUE=[], QIDX=-1, CURSONG=null
-let SEARCH_SONGS=[]
+let SEARCH_SONGS=[], OFFLINE_SONGS=[]
+let ACTIVE_DOWNLOADS = {} // Track active downloads by song ID
 let FAVS=new Set(), PLS=[], CUR_PL=null
 let UP_AUDIO=null, UP_COVER=null, PENDING_PL=null
 const aud = document.getElementById('aud')
@@ -761,8 +831,9 @@ function go(view){
   const bn=document.getElementById('bn-'+view)
   if(ni) ni.classList.add('on')
   if(bn) bn.classList.add('on')
-  if(view==='favs')    loadFavList()
-  if(view==='profile') loadProfile()
+  if(view==='favs')      loadFavList()
+  if(view==='downloads') loadDownloads()
+  if(view==='profile')   loadProfile()
   document.querySelector('.content').scrollTop=0
 }
 
@@ -840,7 +911,6 @@ async function loadSongs(genre='', append=false) {
     }
   } catch (e) { console.warn('Audius error:', e.message) }
 
-  // New Music API Engine: iTunes Public Previews Framework
   let itunesSongs = []
   try {
     let term = (genre && genre !== 'All') ? genre : 'Top Hits'
@@ -919,7 +989,10 @@ function renderGrid(songs, id, append=false) {
         <button class="ib" onclick="event.stopPropagation();openPlModal('${s.id}')">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/></svg>
         </button>
-        ${(!isAudius && !isItunes) ? `<button class="ib" onclick="event.stopPropagation();dlSong('${s.id}','${s.title.replace(/'/g,"\\'")}')">
+        <button class="ib" onclick="event.stopPropagation();saveOffline('${s.id}')" title="Save Offline">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17V3"/><path d="M6 11l6 6 6-6"/><path d="M19 21H5"/></svg>
+        </button>
+        ${(!isAudius && !isItunes) ? `<button class="ib" onclick="event.stopPropagation();dlSong('${s.id}','${s.title.replace(/'/g,"\\'")}')" title="Export MP3">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>` : ''}
         ${isOwner && !isAudius && !isItunes ? `<button class="ib" onclick="event.stopPropagation();delSong('${s.id}')" title="Delete" style="background:rgba(255,68,102,0.75)">
@@ -935,9 +1008,9 @@ function renderGrid(songs, id, append=false) {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="${fav?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>
         <button class="ib" onclick="event.stopPropagation();openPlModal('${s.id}')" style="width:28px;height:28px">+</button>
-        ${(!isAudius && !isItunes) ? `<button class="ib" onclick="event.stopPropagation();dlSong('${s.id}','${s.title.replace(/'/g,"\\'")}')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </button>` : ''}
+        <button class="ib" onclick="event.stopPropagation();saveOffline('${s.id}')" style="width:28px;height:28px" title="Save Offline">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17V3"/><path d="M6 11l6 6 6-6"/><path d="M19 21H5"/></svg>
+        </button>
       </div>
     </div>`
   }).join('')
@@ -950,44 +1023,159 @@ function renderGrid(songs, id, append=false) {
 }
 
 function renderList(songs, cid, showDel = false) {
+  const isOfflineList = cid === 'dlList';
   const el = document.getElementById(cid)
+  
   el.innerHTML = songs.map((s, i) => {
     const fav = isFav(s.id), playing = CURSONG?.id === s.id
     const isAudius = s.source === 'audius'
     const isItunes = s.source === 'itunes'
     const displayLabel = isAudius ? 'AUDIUS' : (isItunes ? 'APPLE' : '')
+    const isDownloading = s.isDownloading === true;
     
     return `
-    <div class="sr ${playing?'on':''}" onclick="playById('${s.id}')">
+    <div class="sr ${playing?'on':''}" ${!isDownloading ? `onclick="playById('${s.id}')"` : ''}>
       <div class="sr-n">${playing?'▶':i+1}</div>
       ${s.cover_url?`<img class="sr-img" src="${s.cover_url}" onerror="this.style.display='none'">`:`<div class="sr-ph">🎵</div>`}
       <div class="sr-info">
         <div class="sr-title">${s.title} ${displayLabel ? `<span style="color:var(--a1);font-size:0.6rem;vertical-align:top;margin-left:4px">${displayLabel}</span>` : ''}</div>
         <div class="sr-sub">${s.artist}${s.genre?` · <span style="color:var(--a1);font-size:.62rem">${s.genre}</span>`:''}</div>
+        ${isDownloading ? `
+          <div class="dl-prog-wrap"><div class="dl-prog-fill" id="dl-prog-fill-${s.id}" style="width:${ACTIVE_DOWNLOADS[s.id]?.progress || 0}%"></div></div>
+          <div class="dl-prog-txt" id="dl-prog-txt-${s.id}">${ACTIVE_DOWNLOADS[s.id]?.text || '0%'}</div>
+        ` : ''}
       </div>
       <div class="sr-acts">
-        <button class="rb fav ${fav?'on':''}" onclick="event.stopPropagation();toggleFav('${s.id}',this)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="${fav?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        </button>
-        <button class="rb" onclick="event.stopPropagation();openPlModal('${s.id}')">+</button>
-        ${showDel && !isAudius && !isItunes ? `<button class="rb del" onclick="event.stopPropagation();delSong('${s.id}')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
-        </button>` : ''}
+        ${isDownloading ? `
+          <div style="font-size: 0.8rem; padding: 4px; animation: spin 2s linear infinite;">⏳</div>
+        ` : `
+          <button class="rb fav ${fav?'on':''}" onclick="event.stopPropagation();toggleFav('${s.id}',this)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="${fav?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
+          <button class="rb" onclick="event.stopPropagation();openPlModal('${s.id}')">+</button>
+          
+          ${!isOfflineList ? `<button class="rb" onclick="event.stopPropagation();saveOffline('${s.id}')" title="Save Offline">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17V3"/><path d="M6 11l6 6 6-6"/><path d="M19 21H5"/></svg>
+          </button>` : ''}
+          
+          ${isOfflineList ? `<button class="rb del" onclick="event.stopPropagation();removeOffline('${s.id}')" title="Remove from Offline Library">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+          </button>` : ''}
+
+          ${showDel && !isOfflineList && !isAudius && !isItunes ? `<button class="rb del" onclick="event.stopPropagation();delSong('${s.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+          </button>` : ''}
+        `}
       </div>
     </div>`
   }).join('')
 }
 
+// ── OFFLINE DOWNLOADS ──
+async function loadDownloads() {
+  const records = await IDB.getAll();
+  OFFLINE_SONGS = records.map(r => {
+    const s = { ...r.song };
+    s.blob = r.blob;
+    s.isOffline = true;
+    return s;
+  });
+  
+  // Combine Active Downloads at the top
+  const activeVals = Object.values(ACTIVE_DOWNLOADS).map(d => ({ ...d.song, isDownloading: true }));
+  const combined = [...activeVals, ...OFFLINE_SONGS.filter(s => !ACTIVE_DOWNLOADS[s.id])];
+  
+  const empty = document.getElementById('dlEmpty');
+  if(!combined.length) { document.getElementById('dlList').innerHTML=''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  renderList(combined, 'dlList', false);
+}
+
+async function saveOffline(id) {
+  if(!USER) return toast('Sign in to save offline', 'err');
+  if(ACTIVE_DOWNLOADS[id]) return toast('Download already in progress', 'ok');
+  
+  const song = SONGS.find(s=>s.id===id) || SEARCH_SONGS.find(s=>s.id===id) || AUDIUS_CACHE.get(id) || AUDIUS_STORE[id] || OFFLINE_SONGS.find(s=>s.id===id);
+  if(!song) return toast('Song not found', 'err');
+  
+  toast('Downloading offline... ⏳', 'ok');
+  
+  // Track active download
+  ACTIVE_DOWNLOADS[id] = { progress: 0, text: 'Connecting...', song: song };
+  if(document.getElementById('view-downloads').classList.contains('on')) loadDownloads();
+  
+  try {
+    const res = await fetch(song.audio_url);
+    if(!res.ok) throw new Error('Network error');
+    
+    const total = parseInt(res.headers.get('content-length') || '0', 10);
+    let loaded = 0;
+    const reader = res.body.getReader();
+    const chunks = [];
+    
+    while(true) {
+      const {done, value} = await reader.read();
+      if(done) break;
+      chunks.push(value);
+      loaded += value.length;
+      
+      let pct = 0;
+      let txt = '';
+      if(total) {
+        pct = Math.round((loaded/total)*100);
+        txt = pct + '%';
+      } else {
+        // Indeterminate/Missing content-length
+        txt = (loaded / (1024*1024)).toFixed(1) + ' MB';
+        pct = 100; // Keep bar full as pulse indicator
+      }
+      
+      ACTIVE_DOWNLOADS[id].progress = pct;
+      ACTIVE_DOWNLOADS[id].text = txt;
+      
+      // Update DOM directly for performance instead of full render
+      const pFill = document.getElementById(`dl-prog-fill-${id}`);
+      const pTxt = document.getElementById(`dl-prog-txt-${id}`);
+      if(pFill) pFill.style.width = pct + '%';
+      if(pTxt) pTxt.textContent = txt;
+    }
+    
+    const blob = new Blob(chunks, { type: res.headers.get('content-type') || 'audio/mpeg' });
+    await IDB.save(song, blob);
+    
+    delete ACTIVE_DOWNLOADS[id];
+    toast('Saved to Offline Library! ✅', 'ok');
+    if(document.getElementById('view-downloads').classList.contains('on')) loadDownloads();
+    
+  } catch(e) {
+    delete ACTIVE_DOWNLOADS[id];
+    toast('Offline download failed', 'err');
+    if(document.getElementById('view-downloads').classList.contains('on')) loadDownloads();
+  }
+}
+
+async function removeOffline(id) {
+  if(!confirm('Remove this song from your offline library?')) return;
+  await IDB.delete(id);
+  toast('Removed from offline library', 'ok');
+  if(document.getElementById('view-downloads').classList.contains('on')) loadDownloads();
+}
+
 // ── PLAYER ──
 function playById(id){
-  let target = SONGS.find(s=>s.id===id) || SEARCH_SONGS.find(s=>s.id===id) || AUDIUS_CACHE.get(id) || AUDIUS_STORE[id]
+  let target = SONGS.find(s=>s.id===id) || SEARCH_SONGS.find(s=>s.id===id) || AUDIUS_CACHE.get(id) || AUDIUS_STORE[id] || OFFLINE_SONGS.find(s=>s.id===id)
+  
   if(document.getElementById('view-home').classList.contains('on')) {
     QUEUE = [...SONGS]
   } else if (document.getElementById('view-search').classList.contains('on')) {
     QUEUE = [...SEARCH_SONGS]
+  } else if (document.getElementById('view-downloads').classList.contains('on')) {
+    // Only queue non-downloading songs
+    QUEUE = OFFLINE_SONGS;
   } else {
     QUEUE = target ? [target] : []
   }
+  
   QIDX = QUEUE.findIndex(s=>s.id===id)
   if(QIDX === -1 && target) {
     QUEUE.push(target)
@@ -996,13 +1184,40 @@ function playById(id){
   startPlay()
 }
 
-function startPlay(){
-  const s=QUEUE[QIDX]; if(!s) return
-  CURSONG=s; aud.src=s.audio_url; aud.load(); aud.play().catch(e=>{
+async function startPlay(){
+  // Check if the device is online
+  if (!navigator.onLine) {
+    toast('No internet connection. Please check your settings.', 'err');
+    return;
+  }
+
+  const s = QUEUE[QIDX];
+  if(!s) return;
+  
+  aud.src = s.audio_url;
+  aud.load();
+  aud.play().catch(e => {
+    console.warn('Playback block handled:', e.message);
+    toast('Playback error. Please check your connection.', 'err');
+    setTimeout(nextSong, 1000);
+  });
+
+  // Intercept Stream and Use Local IndexedDB Blob if available
+  try {
+    const offlineRec = await IDB.get(s.id);
+    if (offlineRec && offlineRec.blob) {
+      if (s.blobUrl) URL.revokeObjectURL(s.blobUrl);
+      s.blobUrl = URL.createObjectURL(offlineRec.blob);
+      audioSrc = s.blobUrl;
+    }
+  } catch(e) {}
+
+  CURSONG=s; aud.src=audioSrc; aud.load(); aud.play().catch(e=>{
     console.warn('Playback block handled:', e.message);
     toast('Preview access restriction, next track skipping...','err')
     setTimeout(nextSong, 1000)
   })
+  
   setPlayUI(true); updateBar(s)
   if (!s.id.startsWith('audius_') && !s.id.startsWith('itunes_')) {
     sb.from('songs').update({plays:(s.plays||0)+1}).eq('id',s.id)
@@ -1081,7 +1296,7 @@ async function loadFavs(){
 
 async function toggleFav(id, btn){
   if(id.startsWith('audius_') || id.startsWith('itunes_')){
-    const song = AUDIUS_CACHE.get(id) || SEARCH_SONGS.find(x=>x.id===id) || SONGS.find(x=>x.id===id);
+    const song = AUDIUS_CACHE.get(id) || SEARCH_SONGS.find(x=>x.id===id) || SONGS.find(x=>x.id===id) || OFFLINE_SONGS.find(x=>x.id===id);
     if(song) cacheAudiusSong(song);
     if(LOCAL_FAVS.has(id)){
       LOCAL_FAVS.delete(id); saveLocalFavs()
@@ -1144,7 +1359,7 @@ async function loadFavList(){
     songs.push(...(data||[]).map(f=>f.songs).filter(Boolean))
   }
   for(const id of LOCAL_FAVS){
-    const song = AUDIUS_CACHE.get(id) || AUDIUS_STORE[id] || SONGS.find(x=>x.id===id) || SEARCH_SONGS.find(x=>x.id===id)
+    const song = AUDIUS_CACHE.get(id) || AUDIUS_STORE[id] || SONGS.find(x=>x.id===id) || SEARCH_SONGS.find(x=>x.id===id) || OFFLINE_SONGS.find(x=>x.id===id)
     if(song) songs.push(song)
   }
   const empty=document.getElementById('favEmpty')
@@ -1199,7 +1414,7 @@ async function createPlFromModal(){
 
 async function addToPl(plId, songId){
   if(songId.startsWith('audius_') || songId.startsWith('itunes_')){
-    const song = AUDIUS_CACHE.get(songId) || AUDIUS_STORE[songId] || SONGS.find(x=>x.id===songId) || SEARCH_SONGS.find(x=>x.id===songId)
+    const song = AUDIUS_CACHE.get(songId) || AUDIUS_STORE[songId] || SONGS.find(x=>x.id===songId) || SEARCH_SONGS.find(x=>x.id===songId) || OFFLINE_SONGS.find(x=>x.id===songId)
     if(!song){ closePlModal(); return toast('Song data not found','err') }
     cacheAudiusSong(song)
     if(!LOCAL_PL_SONGS[plId]) LOCAL_PL_SONGS[plId] = []
@@ -1446,7 +1661,7 @@ async function doUpload(){
 
 async function dlSong(id,title){
   const song=SONGS.find(s=>s.id===id); if(!song) return
-  toast('Downloading...','ok')
+  toast('Exporting MP3...','ok')
   try{
     const res=await fetch(song.audio_url)
     const blob=await res.blob()
