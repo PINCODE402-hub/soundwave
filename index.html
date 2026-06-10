@@ -782,6 +782,13 @@ async function afterLogin(user){
     prof = np
   }
   PROFILE = prof
+  // Save user for offline access
+  localStorage.setItem('sw_user', JSON.stringify({
+    id: user.id,
+    username: prof?.username || 'user',
+    email: user.email,
+    avatar_url: prof?.avatar_url || ''
+  }));
   document.getElementById('authWrap').classList.add('hidden')
   document.getElementById('topUsername').textContent = '@'+(prof?.username||'user')
   const topAv = document.getElementById('topAvatar')
@@ -812,11 +819,82 @@ async function logout(){
 }
 
 ;(async()=>{
-  document.getElementById('stFav').textContent = LOCAL_FAVS.size
-  const { data:{ session } } = await sb.auth.getSession()
-  if(session) await afterLogin(session.user)
-  else await loadSongs('', false)
-})()
+
+  document.getElementById('stFav').textContent =
+    LOCAL_FAVS.size
+
+  const offlineUser =
+    JSON.parse(localStorage.getItem('sw_user'));
+
+  // OFFLINE STARTUP
+  if (!navigator.onLine && offlineUser) {
+
+    USER = offlineUser;
+    PROFILE = offlineUser;
+
+    document.getElementById('authWrap')
+      .classList.add('hidden');
+
+    document.getElementById('topUsername')
+      .textContent = '@' + offlineUser.username;
+
+    document.getElementById('topAvatar')
+      .classList.remove('hidden');
+
+    document.getElementById('topAvatar')
+      .textContent =
+      offlineUser.username[0].toUpperCase();
+
+    document.getElementById('signinBtn')
+      .classList.add('hidden');
+
+    document.getElementById('logoutBtn')
+      .classList.remove('hidden');
+
+    await loadDownloads();
+
+    go('downloads');
+
+    toast('Offline Mode', 'ok');
+
+    return;
+  }
+
+  // ONLINE STARTUP
+  try {
+
+    const { data:{ session } } =
+      await sb.auth.getSession();
+
+    if(session){
+      await afterLogin(session.user);
+    }else{
+      await loadSongs('', false);
+    }
+
+  } catch(err) {
+
+    console.warn('Startup failed:', err);
+
+    if(offlineUser){
+
+      USER = offlineUser;
+      PROFILE = offlineUser;
+
+      await loadDownloads();
+
+      go('downloads');
+
+      toast('Offline Mode', 'ok');
+
+    } else {
+
+      loadSongs('', false);
+
+    }
+  }
+
+})();
 
 function authGo(view){
   if(!USER){ toast('Sign in to access this feature','err'); showAuth(); return }

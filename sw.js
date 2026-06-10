@@ -1,64 +1,98 @@
-const CACHE_NAME = 'soundwave-v1';
+const CACHE_NAME = 'soundwave-v2';
 
-// Add the static assets you want to load instantly (even offline)
 const STATIC_ASSETS = [
   '/',
-  'index.html',
-  'manifest.json',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Bebas+Neue&display=swap',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js'
+  './',
+  './index.html',
+  './manifest.json',
+  './favicon.ico',
+  './apple-touch-icon.png',
+  './web-app-manifest-192x192.png',
+  './web-app-manifest-512x512.png'
 ];
 
-// 1. Install Event: Cache static assets
+// INSTALL
 self.addEventListener('install', event => {
   self.skipWaiting();
+
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(STATIC_ASSETS))
   );
 });
 
-// 2. Activate Event: Clean up old caches if the version changes
+// ACTIVATE
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      );
-    })
+    caches.keys().then(keys =>
+      Promise.all(
+        keys
+          .filter(key => key !== CACHE_NAME)
+          .map(key => caches.delete(key))
+      )
+    )
   );
+
   self.clients.claim();
 });
 
-// 3. Fetch Event: Serve from cache, fall back to network
+// FETCH
 self.addEventListener('fetch', event => {
+
+  // Handle page navigation
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          const copy = response.clone();
+
+          caches.open(CACHE_NAME)
+            .then(cache => cache.put('./index.html', copy));
+
+          return response;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+
+    return;
+  }
+
   const url = new URL(event.request.url);
 
-  // By-pass caching for Supabase API calls and audio blobs/files
+  // Skip Supabase and streamed audio requests
   if (
-    url.hostname.includes('supabase.co') || 
+    url.hostname.includes('supabase.co') ||
     url.protocol === 'blob:' ||
-    event.request.headers.get('range') // Skip caching for audio streaming chunks
+    event.request.headers.get('range')
   ) {
     return;
   }
 
-  // Stale-While-Revalidate strategy for UI assets
   event.respondWith(
     caches.match(event.request).then(cachedResponse => {
-      const fetchPromise = fetch(event.request).then(networkResponse => {
-        // Only cache valid responses
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return networkResponse;
-      }).catch(err => {
-        console.log('Network failure, serving cached content if available.', err);
-      });
+
+      const fetchPromise = fetch(event.request)
+        .then(networkResponse => {
+
+          if (
+            networkResponse &&
+            networkResponse.status === 200
+          ) {
+            const responseToCache =
+              networkResponse.clone();
+
+            caches.open(CACHE_NAME)
+              .then(cache =>
+                cache.put(
+                  event.request,
+                  responseToCache
+                )
+              );
+          }
+
+          return networkResponse;
+        })
+        .catch(() => null);
 
       return cachedResponse || fetchPromise;
     })
