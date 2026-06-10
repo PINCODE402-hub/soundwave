@@ -1,8 +1,6 @@
 const CACHE_NAME = 'soundwave-v2';
 
 const STATIC_ASSETS = [
-  '/',
-  './',
   './index.html',
   './manifest.json',
   './favicon.ico',
