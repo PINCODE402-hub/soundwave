@@ -11,13 +11,23 @@ const STATIC_ASSETS = [
   './web-app-manifest-512x512.png'
 ];
 
-// INSTALL
+// INSTALL - Use a resilient loop
 self.addEventListener('install', event => {
   self.skipWaiting();
 
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      console.log('Opened cache, starting asset installation...');
+      
+      for (const url of STATIC_ASSETS) {
+        try {
+          await cache.add(url);
+        } catch (err) {
+          // This prevents one missing file from breaking the whole install
+          console.warn(`Failed to cache: ${url} - This file is missing or blocked.`);
+        }
+      }
+    })
   );
 });
 
