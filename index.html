@@ -238,6 +238,11 @@ select.finp option{background:var(--card2)}
 .p-fav.on,.p-fav:hover{color:var(--a2)}
 .vslider{width:70px;-webkit-appearance:none;height:3px;border-radius:2px;background:rgba(255,255,255,0.15);outline:none;cursor:pointer}
 .vslider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff}
+.cb.active{color:var(--a1)}
+/* Mobile mini-player seek strip — shuffle/seek/repeat/skip live in the full-screen player on mobile */
+.m-progress{display:block;position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,0.1);cursor:pointer;z-index:2}
+@media(min-width:640px){.m-progress{display:none}}
+.m-progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--a1),var(--a2));transition:width .15s linear}
 
 /* FULL SCREEN PLAYER */
 .fs-player { position: fixed; inset: 0; background: rgba(10,10,15,0.95); z-index: 250; backdrop-filter: blur(25px); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; transition: opacity 0.3s, transform 0.3s; }
@@ -253,10 +258,14 @@ select.finp option{background:var(--card2)}
 .fs-info { text-align: center; margin-bottom: 30px; width: 100%; max-width: 400px; }
 .fs-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fs-artist { font-size: 1rem; color: var(--muted); }
-.fs-controls { display: flex; align-items: center; gap: 20px; margin-bottom: 30px; }
-.fs-btn { background: none; border: none; color: var(--txt); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+.fs-controls { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
+.fs-btn { background: none; border: none; color: var(--txt); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s, color .2s; }
 .fs-btn:active { transform: scale(0.9); }
+.fs-btn.active { color: var(--a1); }
+.fs-btn-sm { color: var(--muted); }
 .fs-playbtn { width: 64px; height: 64px; border-radius: 50%; background: #fff; color: #0a0a0f; }
+.fs-repeat-wrap{position:relative}
+.fs-repeat-one{position:absolute;bottom:-2px;right:-4px;font-size:.55rem;font-weight:800;background:var(--a1);color:#fff;border-radius:50%;width:13px;height:13px;display:flex;align-items:center;justify-content:center;line-height:1}
 
 /* TOAST */
 .toast{position:fixed;bottom:calc(var(--player-h) + var(--nav-h) + 12px);left:50%;transform:translateX(-50%) translateY(8px);background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:8px 16px;font-size:.76rem;font-weight:500;opacity:0;transition:all .3s;z-index:300;pointer-events:none;white-space:nowrap;max-width:calc(100vw - 32px);text-align:center}
@@ -309,6 +318,84 @@ input.vol-show{display:none}
 @media(min-width:640px){input.vol-show{display:block}}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 audio{display:none}
+/* Dedication Button Styles */
+.dedication-wrap{display:flex;justify-content:center;margin-bottom:20px}
+.dedication-btn {
+  background: linear-gradient(45deg, #7b4fff, #ff3c6e);
+  color: white;
+  border: none;
+  padding: 11px 22px;
+  border-radius: 24px;
+  font-weight: bold;
+  font-size: .82rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 6px 22px rgba(255,60,110,0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: dedication-pulse 2.4s ease-in-out infinite;
+}
+.dedication-btn .icon{display:inline-block;animation:dedication-beat 1.2s ease-in-out infinite}
+@keyframes dedication-pulse{
+  0%,100%{ box-shadow:0 6px 22px rgba(255,60,110,0.35) }
+  50%{ box-shadow:0 6px 30px rgba(123,79,255,0.55) }
+}
+@keyframes dedication-beat{
+  0%,100%{ transform:scale(1) }
+  25%{ transform:scale(1.18) }
+  40%{ transform:scale(0.96) }
+}
+.dedication-btn:hover {
+  transform: scale(1.05);
+}
+
+/* Modal Overlay Styles */
+.teddy-modal {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(10, 10, 15, 0.85); /* Matches your #0a0a0f background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  padding: 20px;
+}
+
+.teddy-modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.teddy-modal-content {
+  background: linear-gradient(160deg,#1e1e28,#241a34);
+  padding: 34px 28px;
+  border-radius: 18px;
+  text-align: center;
+  border: 1px solid rgba(123,79,255,0.5);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  position: relative;
+  max-width: 400px;
+  width: 90%;
+}
+.teddy-modal-content h2{
+  background: linear-gradient(135deg,var(--a1),var(--a2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  font-size:1.2rem;margin-bottom:12px
+}
+.teddy-modal-content p{ color:var(--muted2); line-height:1.6; font-size:.9rem }
+
+.close-teddy-modal {
+  position: absolute;
+  top: 10px; right: 15px;
+  font-size: 24px;
+  color: #ff3c6e;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
 </style>
 </head>
 <body>
@@ -405,10 +492,21 @@ audio{display:none}
   <div class="content">
 
     <div class="view on" id="view-home">
-      <div class="dedication-banner" style="background: linear-gradient(135deg, rgba(123,79,255,0.15), rgba(255,60,110,0.15)); border: 1px solid var(--a1); border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 20px var(--glow); position: relative; overflow: hidden;">
-        <div style="font-family: 'Bebas Neue'; font-size: 1.6rem; letter-spacing: 2px; color: var(--a2); margin-bottom: 4px;">For Thywill (Teddy 🧸)</div>
-        <div style="font-size: 0.85rem; color: var(--txt); font-weight: 500;">Dedicated with all my love to my beautiful girlfriend. You are my ultimate melody. ❤️</div>
-      </div>
+      <!-- Dedication Button (Place this where the old text was, keeping surrounding layout intact) -->
+<div class="dedication-wrap">
+<button id="teddyDedicationBtn" class="dedication-btn">
+  <span class="icon">🧸</span> A Special Dedication
+</button>
+</div>
+
+<!-- Dedication Modal (Place this anywhere in the body, ideally near the bottom before scripts) -->
+<div id="teddyModal" class="teddy-modal hidden">
+  <div class="teddy-modal-content">
+    <span class="close-teddy-modal">&times;</span>
+    <h2>For Thywill (Teddy 🧸)</h2>
+    <p>Dedicated with all my love to my beautiful girlfriend. You are my ultimate melody. ❤️</p>
+  </div>
+</div>
 
       <div class="ph">
         <div class="pt">🎵 Discover</div>
@@ -446,6 +544,35 @@ audio{display:none}
 
     <div class="view" id="view-upload">
       <div class="ph"><div class="pt">⬆️ Upload</div><div class="ps">Share your music with the world</div></div>
+
+      <div class="uform" style="margin-bottom:18px">
+        <div style="font-weight:700;font-size:.85rem;margin-bottom:2px">🎧 Play From Your Device</div>
+        <div class="ps" style="margin-bottom:12px">No upload needed. Give SoundWave permission to read a music folder on your device — nothing leaves your device, and it all plays offline.</div>
+
+        <input type="file" id="deviceFallbackInput" accept="audio/*" multiple webkitdirectory directory class="hidden" onchange="playDeviceFallback(event)"/>
+
+        <div id="deviceConnectBox">
+          <button class="btn btn-p btn-sm" onclick="pickDeviceFolder()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Access Music Folder
+          </button>
+        </div>
+
+        <div id="deviceLibraryBox" class="hidden" style="margin-top:14px">
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-p btn-sm" onclick="playAllDevice(false)">▶ Play All</button>
+            <button class="btn btn-g btn-sm" onclick="playAllDevice(true)">🔀 Shuffle All</button>
+            <button class="btn btn-g btn-sm" onclick="pickDeviceFolder()">📂 Change Folder</button>
+            <span class="ps" id="deviceCount" style="margin-left:auto"></span>
+          </div>
+          <div class="slist" id="deviceList"></div>
+        </div>
+
+        <div class="empty hidden" id="deviceEmpty" style="margin-top:14px">
+          <div class="empty-i">📁</div><div class="empty-t">No audio files found</div><div class="empty-s">Try a different folder</div>
+        </div>
+      </div>
+
       <div class="uform">
         <div class="frow">
           <div class="fgrp"><label class="flbl">Song Title *</label><input class="finp" id="u-title" placeholder="My Amazing Song"/></div>
@@ -569,6 +696,7 @@ audio{display:none}
 </div>
 
 <div class="player">
+  <div class="m-progress" id="mProgress" onclick="seek(event)" title="Seek"><div class="m-progress-fill" id="mProgressFill"></div></div>
   <div class="p-cover-ph" id="pCoverPh">♪</div>
   <img class="p-cover hidden" id="pCover" alt=""/>
   <div class="p-info">
@@ -585,6 +713,10 @@ audio{display:none}
       </button>
       <button class="cb" onclick="skip(10)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 12a9.5 9.5 0 1 0-1.08 4.5"/><polyline points="22 7 22 12 17 12"/></svg></button>
       <button class="cb" onclick="nextSong()"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/></svg></button>
+      <button class="cb" id="repeatBtn" onclick="toggleRepeat()" title="Repeat" style="position:relative">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        <span id="repeatOneBadge" class="fs-repeat-one hidden" style="bottom:0;right:0">1</span>
+      </button>
     </div>
     <div class="p-prog">
       <span class="tlbl" id="curT">0:00</span>
@@ -625,28 +757,80 @@ audio{display:none}
   </div>
 
   <div class="fs-controls">
+    <button class="fs-btn fs-btn-sm" id="fsShuffleBtn" onclick="toggleShuffle()" title="Shuffle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg></button>
+    <button class="fs-btn fs-btn-sm" onclick="skip(-10)" title="Back 10s"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 12a9.5 9.5 0 1 1 1.08 4.5"/><polyline points="2 7 2 12 7 12"/></svg></button>
     <button class="fs-btn" onclick="prevSong()"><svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"/></svg></button>
     <button class="fs-btn fs-playbtn" onclick="togglePlay()">
       <svg id="fsMainIcon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="margin-left:4px"><polygon points="5 3 19 12 5 21 5 3"/></svg>
     </button>
     <button class="fs-btn" onclick="nextSong()"><svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/></svg></button>
+    <button class="fs-btn fs-btn-sm" onclick="skip(10)" title="Forward 10s"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 12a9.5 9.5 0 1 0-1.08 4.5"/><polyline points="22 7 22 12 17 12"/></svg></button>
+    <button class="fs-btn fs-btn-sm fs-repeat-wrap" id="fsRepeatBtn" onclick="toggleRepeat()" title="Repeat">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      <span id="fsRepeatOneBadge" class="fs-repeat-one hidden">1</span>
+    </button>
   </div>
 </div>
 
 <audio id="aud"></audio>
 
 <script>
+  // Dedication Modal Logic
+const teddyBtn = document.getElementById('teddyDedicationBtn');
+const teddyModal = document.getElementById('teddyModal');
+const closeTeddyModal = document.querySelector('.close-teddy-modal');
+
+teddyBtn.addEventListener('click', () => {
+  teddyModal.classList.remove('hidden');
+});
+
+closeTeddyModal.addEventListener('click', () => {
+  teddyModal.classList.add('hidden');
+});
+
+// Close modal if clicking outside the box
+teddyModal.addEventListener('click', (e) => {
+  if (e.target === teddyModal) {
+    teddyModal.classList.add('hidden');
+  }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !teddyModal.classList.contains('hidden')) {
+    teddyModal.classList.add('hidden');
+  }
+});
 // ── INDEXEDDB FOR OFFLINE STORAGE ──
 const IDB = {
   db: null,
   init() {
     return new Promise((res, rej) => {
       if (this.db) return res();
-      const req = indexedDB.open('SW_Offline', 1);
+      const req = indexedDB.open('SW_Offline', 2);
       req.onupgradeneeded = e => {
-        e.target.result.createObjectStore('downloads', { keyPath: 'id' });
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('downloads')) db.createObjectStore('downloads', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
       };
       req.onsuccess = e => { this.db = e.target.result; res(); };
+      req.onerror = rej;
+    });
+  },
+  async saveMeta(key, value) {
+    await this.init();
+    return new Promise((res, rej) => {
+      const tx = this.db.transaction('meta', 'readwrite');
+      tx.objectStore('meta').put({ key, value });
+      tx.oncomplete = res; tx.onerror = rej;
+    });
+  },
+  async getMeta(key) {
+    await this.init();
+    return new Promise((res, rej) => {
+      const tx = this.db.transaction('meta', 'readonly');
+      const req = tx.objectStore('meta').get(key);
+      req.onsuccess = e => res(e.target.result ? e.target.result.value : null);
       req.onerror = rej;
     });
   },
@@ -755,7 +939,7 @@ let LOCAL_PL_SONGS = lsGet('sw_pl_songs', {});
 function saveLocalFavs() { lsSet('sw_favs', [...LOCAL_FAVS]) }
 function cacheAudiusSong(song) { AUDIUS_STORE[song.id]=song; lsSet('sw_audius_songs', AUDIUS_STORE) }
 function saveLocalPls()  { lsSet('sw_pl_songs', LOCAL_PL_SONGS) }
-function isFav(id) { return (id.startsWith('audius_') || id.startsWith('itunes_')) ? LOCAL_FAVS.has(id) : FAVS.has(id) }
+function isFav(id) { return (id.startsWith('audius_') || id.startsWith('itunes_') || id.startsWith('local_') || id.startsWith('device_')) ? LOCAL_FAVS.has(id) : FAVS.has(id) }
 function updateFavCount() { document.getElementById('stFav').textContent = FAVS.size + LOCAL_FAVS.size }
 
 // ── PWA INSTALL ──
@@ -799,9 +983,152 @@ function playLocalFiles(e) {
   e.target.value = '';
 }
 
+// ── DEVICE MUSIC LIBRARY (offline, no upload — reads permission-granted local storage) ──
+let DEVICE_SONGS = [];
+let DEVICE_DIR_HANDLE = null;
+const AUDIO_FILE_RE = /\.(mp3|wav|flac|m4a|aac|ogg|opus|wma)$/i;
+
+async function walkDeviceDir(dirHandle, path = '') {
+  let out = [];
+  for await (const [name, handle] of dirHandle.entries()) {
+    const fullPath = path ? `${path}/${name}` : name;
+    if (handle.kind === 'file') {
+      if (AUDIO_FILE_RE.test(name)) out.push({ handle, name, path: fullPath });
+    } else if (handle.kind === 'directory') {
+      out = out.concat(await walkDeviceDir(handle, fullPath));
+    }
+  }
+  return out;
+}
+
+function renderDeviceUI() {
+  const count = DEVICE_SONGS.length;
+  document.getElementById('deviceConnectBox').classList.add('hidden');
+  document.getElementById('deviceLibraryBox').classList.toggle('hidden', count === 0);
+  document.getElementById('deviceEmpty').classList.toggle('hidden', count !== 0);
+  document.getElementById('deviceCount').textContent = count ? `${count} track(s) found` : '';
+  renderDeviceList();
+}
+
+function renderDeviceList() {
+  const el = document.getElementById('deviceList');
+  if (!el) return;
+  el.innerHTML = DEVICE_SONGS.map((s, i) => {
+    const playing = CURSONG?.id === s.id;
+    return `
+    <div class="sr ${playing ? 'on' : ''}" onclick="playDeviceIdx(${i})">
+      <div class="sr-n">${playing ? '▶' : i + 1}</div>
+      <div class="sr-ph">🎵</div>
+      <div class="sr-info">
+        <div class="sr-title">${s.title}</div>
+        <div class="sr-sub">${s.artist}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function scanDeviceFolder(dirHandle) {
+  toast('Scanning folder for music... 🔎', 'ok');
+  try {
+    const files = await walkDeviceDir(dirHandle);
+    DEVICE_SONGS = files.map((f, i) => ({
+      id: 'device_' + i + '_' + f.path,
+      title: f.name.replace(/\.[^/.]+$/, ''),
+      artist: 'My Device',
+      audio_url: '',
+      cover_url: '',
+      source: 'device',
+      fileHandle: f.handle
+    }));
+    renderDeviceUI();
+    toast(DEVICE_SONGS.length ? `Found ${DEVICE_SONGS.length} track(s) on your device 🎶` : 'No audio files found in that folder', DEVICE_SONGS.length ? 'ok' : 'err');
+  } catch (e) {
+    console.error(e);
+    toast('Could not scan folder', 'err');
+  }
+}
+
+async function pickDeviceFolder() {
+  if (!window.showDirectoryPicker) {
+    // Fallback for browsers without the File System Access API (e.g. Safari, Firefox)
+    document.getElementById('deviceFallbackInput').click();
+    return;
+  }
+  try {
+    const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+    DEVICE_DIR_HANDLE = dirHandle;
+    IDB.saveMeta('deviceDir', dirHandle).catch(() => {});
+    await scanDeviceFolder(dirHandle);
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('Could not access folder', 'err');
+  }
+}
+
+function playDeviceFallback(e) {
+  const files = e.target.files;
+  if (!files.length) return;
+  DEVICE_SONGS = Array.from(files).filter(f => AUDIO_FILE_RE.test(f.name)).map((file, i) => ({
+    id: 'device_' + Date.now() + '_' + i,
+    title: file.name.replace(/\.[^/.]+$/, ''),
+    artist: 'My Device',
+    audio_url: URL.createObjectURL(file),
+    cover_url: '',
+    source: 'device-file'
+  }));
+  renderDeviceUI();
+  toast(DEVICE_SONGS.length ? `Loaded ${DEVICE_SONGS.length} track(s) 🎶` : 'No audio files found in that folder', DEVICE_SONGS.length ? 'ok' : 'err');
+  e.target.value = '';
+}
+
+async function tryReconnectDeviceFolder() {
+  try {
+    const handle = await IDB.getMeta('deviceDir');
+    if (!handle || !handle.queryPermission) return;
+    const perm = await handle.queryPermission({ mode: 'read' });
+    DEVICE_DIR_HANDLE = handle;
+    if (perm === 'granted') {
+      await scanDeviceFolder(handle);
+    } else {
+      const box = document.getElementById('deviceConnectBox');
+      if (box) box.innerHTML = `<button class="btn btn-p btn-sm" onclick="reconnectDeviceFolder()">🔄 Reconnect Music Folder</button>`;
+    }
+  } catch (e) { /* handle likely stale, unsupported browser, or first visit — ignore */ }
+}
+
+async function reconnectDeviceFolder() {
+  if (!DEVICE_DIR_HANDLE) return pickDeviceFolder();
+  try {
+    const perm = await DEVICE_DIR_HANDLE.requestPermission({ mode: 'read' });
+    if (perm === 'granted') await scanDeviceFolder(DEVICE_DIR_HANDLE);
+    else toast('Permission denied', 'err');
+  } catch (e) {
+    toast('Could not reconnect — pick the folder again', 'err');
+    pickDeviceFolder();
+  }
+}
+
+function playDeviceIdx(i) {
+  QUEUE = [...DEVICE_SONGS];
+  QIDX = i;
+  startPlay();
+}
+
+function playAllDevice(shuffleFlag) {
+  if (!DEVICE_SONGS.length) return toast('No local tracks found yet — access a folder first', 'err');
+  QUEUE = [...DEVICE_SONGS];
+  if (shuffleFlag) {
+    SHUFFLE = true;
+    document.querySelectorAll('#shuffleBtn,#fsShuffleBtn').forEach(b => b && b.classList.add('active'));
+    QIDX = Math.floor(Math.random() * QUEUE.length);
+  } else {
+    QIDX = 0;
+  }
+  startPlay();
+}
+
 // ── FULL SCREEN PLAYER TOGGLE ──
 document.querySelector('.player').addEventListener('click', (e) => {
-  if(e.target.closest('.cb') || e.target.closest('.ptrack') || e.target.closest('.vslider')) return;
+  if(e.target.closest('.cb') || e.target.closest('.ptrack') || e.target.closest('.vslider') || e.target.closest('.m-progress')) return;
   document.getElementById('fsPlayer').classList.remove('hidden');
 });
 
@@ -949,6 +1276,8 @@ async function logout(){
     }
   }
 })();
+
+tryReconnectDeviceFolder().catch(()=>{});
 
 function authGo(view){
   if(!USER){ toast('Sign in to access this feature','err'); showAuth(); return }
@@ -1318,15 +1647,28 @@ async function startPlay() {
 
   let audioSrc = s.audio_url;
 
-  try {
-    const offlineRec = await IDB.get(s.id);
-    if (offlineRec && offlineRec.blob) {
+  if (s.source === 'device' && s.fileHandle) {
+    try {
+      const file = await s.fileHandle.getFile();
       if (s.blobUrl) URL.revokeObjectURL(s.blobUrl);
-      s.blobUrl = URL.createObjectURL(offlineRec.blob);
+      s.blobUrl = URL.createObjectURL(file);
       audioSrc = s.blobUrl;
+    } catch (e) {
+      console.error('Device file read error:', e);
+      toast('Could not read this file — folder permission may have been lost', 'err');
+      return;
     }
-  } catch (e) {
-    console.error('IDB Fetch error:', e);
+  } else {
+    try {
+      const offlineRec = await IDB.get(s.id);
+      if (offlineRec && offlineRec.blob) {
+        if (s.blobUrl) URL.revokeObjectURL(s.blobUrl);
+        s.blobUrl = URL.createObjectURL(offlineRec.blob);
+        audioSrc = s.blobUrl;
+      }
+    } catch (e) {
+      console.error('IDB Fetch error:', e);
+    }
   }
 
   if (!navigator.onLine && audioSrc === s.audio_url) {
@@ -1338,10 +1680,11 @@ async function startPlay() {
   aud.load();
   setPlayUI(true);
   updateBar(s);
+  if (s.source === 'device' || s.source === 'device-file') renderDeviceList();
 
   try {
     await aud.play();
-    if (!s.id.startsWith('audius_') && !s.id.startsWith('itunes_') && !s.id.startsWith('local_')) {
+    if (!s.id.startsWith('audius_') && !s.id.startsWith('itunes_') && !s.id.startsWith('local_') && !s.id.startsWith('device_')) {
       sb.from('songs').update({ plays: (s.plays || 0) + 1 }).eq('id', s.id);
     }
   } catch (e) {
@@ -1389,10 +1732,19 @@ function setPlayUI(on){
 }
 
 let SHUFFLE = false;
+// REPEAT modes: 'off' | 'all' | 'one'
+let REPEAT = 'all';
+
 function nextSong(){
   if(!QUEUE.length) return;
-  if(SHUFFLE) QIDX = Math.floor(Math.random() * QUEUE.length);
-  else QIDX=(QIDX+1)%QUEUE.length;
+  if(SHUFFLE){
+    QIDX = Math.floor(Math.random() * QUEUE.length);
+  } else if(QIDX + 1 >= QUEUE.length){
+    if(REPEAT === 'off'){ setPlayUI(false); return; }
+    QIDX = 0;
+  } else {
+    QIDX = QIDX + 1;
+  }
   startPlay()
 }
 function prevSong() {
@@ -1401,19 +1753,28 @@ function prevSong() {
   startPlay()
 }
 function skip(sec) {
-  if(!aud.src) return
-  aud.currentTime += sec
+  if(!aud.src || !isFinite(aud.duration)) return
+  aud.currentTime = Math.min(Math.max(0, aud.currentTime + sec), aud.duration || aud.currentTime + sec)
 }
 function seek(e) {
-  if(!aud.duration) return
+  if(!aud.src || !isFinite(aud.duration) || !aud.duration) return
   const rect = e.currentTarget.getBoundingClientRect()
-  const pct = (e.clientX - rect.left) / rect.width
+  const pct = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
   aud.currentTime = pct * aud.duration
 }
 function toggleShuffle(){
   SHUFFLE = !SHUFFLE;
-  document.getElementById('shuffleBtn').style.color = SHUFFLE ? 'var(--a1)' : '';
+  document.querySelectorAll('#shuffleBtn,#fsShuffleBtn').forEach(b=>{ if(b) b.classList.toggle('active', SHUFFLE) });
   toast(SHUFFLE ? 'Shuffle on 🔀' : 'Shuffle off', 'ok');
+}
+function toggleRepeat(){
+  REPEAT = REPEAT === 'off' ? 'all' : REPEAT === 'all' ? 'one' : 'off';
+  document.querySelectorAll('#repeatBtn,#fsRepeatBtn').forEach(b=>{ if(b) b.classList.toggle('active', REPEAT !== 'off') });
+  const one = REPEAT === 'one';
+  const badges = ['repeatOneBadge','fsRepeatOneBadge'].map(id=>document.getElementById(id));
+  badges.forEach(b=>{ if(b) b.classList.toggle('hidden', !one) });
+  const label = REPEAT === 'off' ? 'Repeat off' : REPEAT === 'all' ? 'Repeat all 🔁' : 'Repeat one 🔂';
+  toast(label, 'ok');
 }
 
 aud.addEventListener('error', async () => {
@@ -1444,6 +1805,9 @@ aud.addEventListener('timeupdate',()=>{
   
   const fsPfill = document.getElementById('fsPfill'); 
   if(fsPfill) fsPfill.style.width=p+'%';
+
+  const mPfill = document.getElementById('mProgressFill');
+  if(mPfill) mPfill.style.width=p+'%';
   
   const t = fmt(aud.currentTime)
   document.getElementById('curT').textContent=t
@@ -1457,7 +1821,10 @@ aud.addEventListener('loadedmetadata',()=>{
   const fsDurT = document.getElementById('fsDurT');
   if(fsDurT) fsDurT.textContent=d;
 })
-aud.addEventListener('ended', nextSong)
+aud.addEventListener('ended', ()=>{
+  if(REPEAT === 'one'){ aud.currentTime = 0; aud.play().catch(()=>{}); return; }
+  nextSong();
+})
 aud.addEventListener('play',  ()=>setPlayUI(true))
 aud.addEventListener('pause', ()=>setPlayUI(false))
 
